@@ -16,11 +16,11 @@ class MotoRideApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         scaffoldBackgroundColor: const Color(0xFFF8F9FA),
-        primaryColor: HomePage.laranja,
+        primaryColor: Colors.orange, // Alterado para cor padrão do Flutter
         colorScheme: ColorScheme.fromSeed(
-          seedColor: HomePage.laranja,
-          primary: HomePage.laranja,
-          secondary: HomePage.preto,
+          seedColor: Colors.orange,  // Alterado para cor padrão do Flutter
+          primary: Colors.orange,    // Alterado para cor padrão do Flutter
+          secondary: Colors.black,   // Alterado para cor padrão do Flutter
         ),
         useMaterial3: true,
       ),
