@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import '../services/strava_api.dart';
 import 'home_page.dart';
@@ -48,9 +47,7 @@ class _BikesPageState extends State<BikesPage> {
     }
   }
 
-  Future<void> _openBikeForm({
-    Map<String, dynamic>? bike,
-  }) async {
+  Future<void> _openBikeForm({Map<String, dynamic>? bike}) async {
     final model = TextEditingController(
       text: bike?['modelo']?.toString() ?? '',
     );
@@ -73,17 +70,14 @@ class _BikesPageState extends State<BikesPage> {
         isScrollControlled: true,
         useSafeArea: true,
         shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(
-            top: Radius.circular(20),
-          ),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
         builder: (sheetContext) {
           return StatefulBuilder(
             builder: (context, setSheetState) {
               return Padding(
                 padding: EdgeInsets.only(
-                  bottom:
-                      MediaQuery.of(context).viewInsets.bottom + 20,
+                  bottom: MediaQuery.of(context).viewInsets.bottom + 20,
                   left: 20,
                   right: 20,
                   top: 20,
@@ -113,8 +107,7 @@ class _BikesPageState extends State<BikesPage> {
                             border: OutlineInputBorder(),
                           ),
                           validator: (value) {
-                            if (value == null ||
-                                value.trim().isEmpty) {
+                            if (value == null || value.trim().isEmpty) {
                               return 'Informe o modelo.';
                             }
                             return null;
@@ -131,11 +124,9 @@ class _BikesPageState extends State<BikesPage> {
                             border: OutlineInputBorder(),
                           ),
                           validator: (value) {
-                            final cilindrada =
-                                int.tryParse(value ?? '');
+                            final cilindrada = int.tryParse(value ?? '');
 
-                            if (cilindrada == null ||
-                                cilindrada <= 0) {
+                            if (cilindrada == null || cilindrada <= 0) {
                               return 'Informe uma cilindrada válida.';
                             }
 
@@ -147,8 +138,7 @@ class _BikesPageState extends State<BikesPage> {
 
                         TextFormField(
                           controller: consumption,
-                          keyboardType:
-                              const TextInputType.numberWithOptions(
+                          keyboardType: const TextInputType.numberWithOptions(
                             decimal: true,
                           ),
                           decoration: const InputDecoration(
@@ -156,8 +146,7 @@ class _BikesPageState extends State<BikesPage> {
                             border: OutlineInputBorder(),
                           ),
                           validator: (value) {
-                            if (value == null ||
-                                value.trim().isEmpty) {
+                            if (value == null || value.trim().isEmpty) {
                               return null;
                             }
 
@@ -186,8 +175,7 @@ class _BikesPageState extends State<BikesPage> {
                             onPressed: saving
                                 ? null
                                 : () async {
-                                    if (!formKey.currentState!
-                                        .validate()) {
+                                    if (!formKey.currentState!.validate()) {
                                       return;
                                     }
 
@@ -196,23 +184,20 @@ class _BikesPageState extends State<BikesPage> {
                                     });
 
                                     try {
-                                      final modelo =
-                                          model.text.trim();
+                                      final modelo = model.text.trim();
 
-                                      final cilindrada =
-                                          int.parse(cc.text.trim());
+                                      final cilindrada = int.parse(
+                                        cc.text.trim(),
+                                      );
 
-                                      final consumoTexto =
-                                          consumption.text
-                                              .trim()
-                                              .replaceAll(',', '.');
+                                      final consumoTexto = consumption.text
+                                          .trim()
+                                          .replaceAll(',', '.');
 
                                       final double? consumo =
                                           consumoTexto.isEmpty
-                                              ? null
-                                              : double.parse(
-                                                  consumoTexto,
-                                                );
+                                          ? null
+                                          : double.parse(consumoTexto);
 
                                       if (bike == null) {
                                         await StravaApi.criarMoto(
@@ -238,8 +223,9 @@ class _BikesPageState extends State<BikesPage> {
                                       Navigator.of(sheetContext).pop();
 
                                       if (mounted) {
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
                                           SnackBar(
                                             content: Text(
                                               bike == null
@@ -282,8 +268,8 @@ class _BikesPageState extends State<BikesPage> {
                               saving
                                   ? 'SALVANDO...'
                                   : bike == null
-                                      ? 'CADASTRAR'
-                                      : 'SALVAR ALTERAÇÕES',
+                                  ? 'CADASTRAR'
+                                  : 'SALVAR ALTERAÇÕES',
                             ),
                           ),
                         ),
@@ -310,18 +296,14 @@ class _BikesPageState extends State<BikesPage> {
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Excluir motocicleta?'),
-        content: Text(
-          'Deseja excluir ${bike['modelo']}?',
-        ),
+        content: Text('Deseja excluir ${bike['modelo']}?'),
         actions: [
           TextButton(
-            onPressed: () =>
-                Navigator.pop(dialogContext, false),
+            onPressed: () => Navigator.pop(dialogContext, false),
             child: const Text('Cancelar'),
           ),
           FilledButton(
-            onPressed: () =>
-                Navigator.pop(dialogContext, true),
+            onPressed: () => Navigator.pop(dialogContext, true),
             child: const Text('Excluir'),
           ),
         ],
@@ -336,9 +318,7 @@ class _BikesPageState extends State<BikesPage> {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Motocicleta excluída com sucesso!'),
-        ),
+        const SnackBar(content: Text('Motocicleta excluída com sucesso!')),
       );
 
       await _load();
@@ -346,11 +326,7 @@ class _BikesPageState extends State<BikesPage> {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            e.toString().replaceFirst('Exception: ', ''),
-          ),
-        ),
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
       );
     }
   }
@@ -359,117 +335,200 @@ class _BikesPageState extends State<BikesPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Minha Garagem de Motos',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
+        title: const Text('Minha garagem'),
         actions: [
-          IconButton(
-            onPressed: _load,
-            icon: const Icon(Icons.refresh),
-          ),
+          IconButton(onPressed: _load, icon: const Icon(Icons.refresh)),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: FloatingActionButton.extended(
         backgroundColor: HomePage.laranja,
         onPressed: () => _openBikeForm(),
-        child: const Icon(
-          Icons.add,
-          color: Colors.white,
-        ),
+        foregroundColor: Colors.white,
+        icon: const Icon(Icons.add_rounded),
+        label: const Text('Adicionar moto'),
       ),
       body: _loading
-          ? const Center(
-              child: CircularProgressIndicator(),
-            )
+          ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? _errorView()
-              : _bikes.isEmpty
-                  ? Center(
+          ? _errorView()
+          : _bikes.isEmpty
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(26),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 82,
+                      height: 82,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFF0E9),
+                        borderRadius: BorderRadius.circular(26),
+                      ),
+                      child: const Icon(
+                        Icons.two_wheeler_rounded,
+                        size: 42,
+                        color: HomePage.laranja,
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    const Text(
+                      'Sua garagem começa aqui',
+                      style: TextStyle(
+                        fontSize: 19,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 7),
+                    const Text(
+                      'Cadastre sua moto para associá-la às viagens e acompanhar o consumo.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Color(0xFF827B77), height: 1.4),
+                    ),
+                    const SizedBox(height: 16),
+                    OutlinedButton.icon(
+                      onPressed: () => _openBikeForm(),
+                      icon: const Icon(Icons.add),
+                      label: const Text('Cadastrar primeira moto'),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          : RefreshIndicator(
+              onRefresh: _load,
+              child: ListView.builder(
+                padding: const EdgeInsets.fromLTRB(18, 14, 18, 100),
+                itemCount: _bikes.length + 1,
+                itemBuilder: (context, index) {
+                  if (index == 0) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 18),
                       child: Column(
-                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Icon(
-                            Icons.two_wheeler,
-                            size: 56,
-                            color: Colors.grey,
-                          ),
-                          const SizedBox(height: 10),
                           const Text(
-                            'Nenhuma motocicleta cadastrada.',
+                            'Sua garagem',
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.w800,
+                            ),
                           ),
-                          TextButton(
-                            onPressed: () => _openBikeForm(),
-                            child: const Text(
-                              'Cadastrar primeira moto',
+                          const SizedBox(height: 4),
+                          Text(
+                            '${_bikes.length} ${_bikes.length == 1 ? 'motocicleta cadastrada' : 'motocicletas cadastradas'}',
+                            style: const TextStyle(color: Color(0xFF827B77)),
+                          ),
+                          const SizedBox(height: 14),
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: HomePage.preto,
+                              borderRadius: BorderRadius.circular(18),
+                            ),
+                            child: const Row(
+                              children: [
+                                Icon(
+                                  Icons.two_wheeler_rounded,
+                                  color: HomePage.laranja,
+                                  size: 25,
+                                ),
+                                SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    'Mantenha seus modelos e dados de consumo organizados em um só lugar.',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      height: 1.35,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
                       ),
-                    )
-                  : RefreshIndicator(
-                      onRefresh: _load,
-                      child: ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: _bikes.length,
-                        itemBuilder: (context, index) {
-                          final bike = _bikes[index];
+                    );
+                  }
 
-                          final cc =
-                              bike['cilindrada']?.toString() ?? '—';
+                  final bike = _bikes[index - 1];
 
-                          final consumo =
-                              bike['consumo_km_l'] == null
-                                  ? 'Não informado'
-                                  : '${bike['consumo_km_l']} km/L';
+                  final cc = bike['cilindrada']?.toString() ?? '—';
 
-                          return Card(
-                            margin: const EdgeInsets.only(
-                              bottom: 12,
+                  final consumo = bike['consumo_km_l'] == null
+                      ? 'Não informado'
+                      : '${bike['consumo_km_l']} km/L';
+
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(15, 14, 8, 14),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 56,
+                            height: 56,
+                            decoration: BoxDecoration(
+                              color: HomePage.preto,
+                              borderRadius: BorderRadius.circular(18),
                             ),
-                            child: ListTile(
-                              leading: const CircleAvatar(
-                                backgroundColor: HomePage.preto,
-                                child: Icon(
-                                  Icons.two_wheeler,
-                                  color: HomePage.laranja,
-                                ),
-                              ),
-                              title: Text(
-                                bike['modelo']?.toString() ?? 'Moto',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              subtitle: Text(
-                                '$cc cc • Consumo: $consumo',
-                              ),
-                              trailing: PopupMenuButton<String>(
-                                onSelected: (value) {
-                                  if (value == 'editar') {
-                                    _openBikeForm(bike: bike);
-                                  }
-
-                                  if (value == 'excluir') {
-                                    _delete(bike);
-                                  }
-                                },
-                                itemBuilder: (_) => const [
-                                  PopupMenuItem(
-                                    value: 'editar',
-                                    child: Text('Editar'),
-                                  ),
-                                  PopupMenuItem(
-                                    value: 'excluir',
-                                    child: Text('Excluir'),
-                                  ),
-                                ],
-                              ),
+                            child: const Icon(
+                              Icons.two_wheeler_rounded,
+                              color: HomePage.laranja,
+                              size: 28,
                             ),
-                          );
-                        },
+                          ),
+                          const SizedBox(width: 13),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  bike['modelo']?.toString() ?? 'Moto',
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                                const SizedBox(height: 7),
+                                Wrap(
+                                  spacing: 6,
+                                  runSpacing: 6,
+                                  children: [
+                                    _BikeTag(label: '$cc cc'),
+                                    _BikeTag(label: consumo),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                          PopupMenuButton<String>(
+                            tooltip: 'Opções da moto',
+                            onSelected: (value) {
+                              if (value == 'editar') _openBikeForm(bike: bike);
+                              if (value == 'excluir') _delete(bike);
+                            },
+                            itemBuilder: (_) => const [
+                              PopupMenuItem(
+                                value: 'editar',
+                                child: Text('Editar'),
+                              ),
+                              PopupMenuItem(
+                                value: 'excluir',
+                                child: Text('Excluir'),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
+                  );
+                },
+              ),
+            ),
     );
   }
 
@@ -480,22 +539,42 @@ class _BikesPageState extends State<BikesPage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
-              Icons.cloud_off,
-              size: 48,
-              color: Colors.redAccent,
-            ),
+            const Icon(Icons.cloud_off, size: 48, color: Colors.redAccent),
             const SizedBox(height: 12),
-            Text(
-              _error!,
-              textAlign: TextAlign.center,
-            ),
+            Text(_error!, textAlign: TextAlign.center),
             const SizedBox(height: 12),
             ElevatedButton(
               onPressed: _load,
               child: const Text('Tentar novamente'),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _BikeTag extends StatelessWidget {
+  const _BikeTag({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF0E9),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(
+          color: Color(0xFF8E3B20),
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
         ),
       ),
     );

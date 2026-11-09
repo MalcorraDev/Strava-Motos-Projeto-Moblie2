@@ -28,7 +28,15 @@ class _MainNavigationWrapperState extends State<MainNavigationWrapper> {
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         selectedItemColor: HomePage.laranja,
-        unselectedItemColor: Colors.grey,
+        unselectedItemColor: Theme.of(context).colorScheme.onSurfaceVariant,
+        backgroundColor: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF1A1716)
+            : const Color(0xFFFFF8F5),
+        elevation: 12,
+        iconSize: 23,
+        selectedFontSize: 12,
+        unselectedFontSize: 11,
+        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w700),
         type: BottomNavigationBarType.fixed,
         onTap: (index) {
           setState(() {
@@ -36,22 +44,13 @@ class _MainNavigationWrapperState extends State<MainNavigationWrapper> {
           });
         },
         items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.route),
-            label: 'Rotas',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.route), label: 'Rotas'),
           BottomNavigationBarItem(
             icon: Icon(Icons.two_wheeler),
             label: 'Motos',
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'Perfil',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Perfil'),
         ],
       ),
     );

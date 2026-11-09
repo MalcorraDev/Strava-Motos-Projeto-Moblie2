@@ -63,7 +63,9 @@ class _HomePageState extends State<HomePage> {
     );
     final lastTrip = _trips.isEmpty ? null : _trips.first;
     final lastBike = lastTrip?['motocicletas'];
-    final lastBikeName = lastBike is Map ? lastBike['modelo']?.toString() : null;
+    final lastBikeName = lastBike is Map
+        ? lastBike['modelo']?.toString()
+        : null;
 
     return Scaffold(
       body: SafeArea(
@@ -71,7 +73,7 @@ class _HomePageState extends State<HomePage> {
           onRefresh: _loadTrips,
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -86,46 +88,102 @@ class _HomePageState extends State<HomePage> {
                         color: HomePage.laranja,
                       ),
                     ),
-                    const CircleAvatar(
-                      backgroundColor: HomePage.preto,
-                      child: Icon(Icons.two_wheeler, color: Colors.white),
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: HomePage.preto,
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                      child: const Icon(Icons.two_wheeler, color: Colors.white),
                     ),
                   ],
                 ),
-                const SizedBox(height: 25),
+                const SizedBox(height: 24),
                 const Text(
-                  'Olá, motociclista!',
-                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+                  'Olá, motociclista 👋',
+                  style: TextStyle(fontSize: 25, fontWeight: FontWeight.w800),
                 ),
                 const Text(
-                  'Pronto para um novo rolê?',
-                  style: TextStyle(fontSize: 16, color: Colors.grey),
+                  'Que tal colocar a estrada no roteiro?',
+                  style: TextStyle(fontSize: 14, color: Color(0xFF827B77)),
                 ),
                 const SizedBox(height: 20),
                 Container(
                   width: double.infinity,
-                  height: 150,
+                  height: 190,
+                  clipBehavior: Clip.antiAlias,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFE0E0E0),
-                    borderRadius: BorderRadius.circular(16),
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [Color(0xFF181818), Color(0xFF34302E)],
+                    ),
+                    borderRadius: BorderRadius.circular(22),
                   ),
-                  child: const Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                  child: Stack(
                     children: [
-                      Icon(Icons.map_outlined, size: 46, color: Colors.grey),
-                      SizedBox(height: 8),
-                      Text(
-                        'Mapa e rastreamento GPS ainda não disponíveis',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.grey, fontSize: 14),
+                      Positioned(
+                        right: -15,
+                        bottom: -32,
+                        child: Icon(
+                          Icons.route_rounded,
+                          size: 190,
+                          color: HomePage.laranja.withValues(alpha: 0.15),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: HomePage.laranja.withValues(alpha: 0.17),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: const Text(
+                                'SEU PRÓXIMO ROLÊ',
+                                style: TextStyle(
+                                  color: HomePage.laranja,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 1,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 13),
+                            const Text(
+                              'A estrada\nte espera.',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 25,
+                                height: 1.05,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            const SizedBox(height: 9),
+                            const Text(
+                              'Registre cada quilômetro do passeio.',
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 15),
+                const SizedBox(height: 12),
                 SizedBox(
                   width: double.infinity,
-                  height: 55,
                   child: ElevatedButton.icon(
                     onPressed: () async {
                       await Navigator.push(
@@ -138,19 +196,24 @@ class _HomePageState extends State<HomePage> {
                     },
                     icon: const Icon(Icons.play_arrow),
                     label: const Text(
-                      'CONFIGURAR ROTA',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      'COMEÇAR VIAGEM',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.4,
+                      ),
                     ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: HomePage.laranja,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
+                        borderRadius: BorderRadius.circular(15),
                       ),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
                   ),
                 ),
-                const SizedBox(height: 25),
+                const SizedBox(height: 22),
                 if (_loading)
                   const Center(child: CircularProgressIndicator())
                 else if (_error != null)
@@ -169,19 +232,48 @@ class _HomePageState extends State<HomePage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      _Summary(icon: Icons.route, value: '${_formatDistance(totalDistance)} km', label: 'Distância'),
-                      _Summary(icon: Icons.timer_outlined, value: _formatDuration(totalSeconds), label: 'Tempo'),
-                      _Summary(icon: Icons.two_wheeler, value: '${_trips.length}', label: 'Viagens'),
+                      Expanded(
+                        child: _Summary(
+                          icon: Icons.route_rounded,
+                          value: '${_formatDistance(totalDistance)} km',
+                          label: 'DISTÂNCIA',
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _Summary(
+                          icon: Icons.timer_outlined,
+                          value: _formatDuration(totalSeconds),
+                          label: 'TEMPO',
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _Summary(
+                          icon: Icons.two_wheeler,
+                          value: '${_trips.length}',
+                          label: 'VIAGENS',
+                        ),
+                      ),
                     ],
                   ),
                 const SizedBox(height: 25),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('Última viagem', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                    const Text(
+                      'Última viagem',
+                      style: TextStyle(
+                        fontSize: 19,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
                     TextButton(
                       onPressed: () {
-                        Navigator.push(context, MaterialPageRoute(builder: (_) => const RoutesPage()));
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const RoutesPage()),
+                        );
                       },
                       child: const Text('Ver todas'),
                     ),
@@ -194,23 +286,43 @@ class _HomePageState extends State<HomePage> {
                   const Card(
                     child: Padding(
                       padding: EdgeInsets.all(18),
-                      child: Text('Nenhuma viagem salva ainda. Suas viagens aparecerão aqui.'),
+                      child: Text(
+                        'Nenhuma viagem salva ainda. Suas viagens aparecerão aqui.',
+                      ),
                     ),
                   )
                 else
                   Card(
-                    child: ListTile(
-                      leading: const CircleAvatar(
-                        backgroundColor: HomePage.preto,
-                        child: Icon(Icons.two_wheeler, color: HomePage.laranja),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      child: ListTile(
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 4,
+                        ),
+                        leading: Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: HomePage.preto,
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: const Icon(
+                            Icons.two_wheeler,
+                            color: HomePage.laranja,
+                          ),
+                        ),
+                        title: Text(
+                          lastTrip['titulo']?.toString() ?? 'Viagem',
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                        subtitle: Text(
+                          '${_formatDistance(lastTrip['distancia_km'] as num?)} km  •  '
+                          '${_formatDuration(lastTrip['duracao_segundos'] as num?)}\n'
+                          '${lastBikeName ?? 'Moto não informada'}',
+                        ),
+                        isThreeLine: true,
                       ),
-                      title: Text(lastTrip['titulo']?.toString() ?? 'Viagem'),
-                      subtitle: Text(
-                        '${_formatDistance(lastTrip['distancia_km'] as num?)} km • '
-                        '${_formatDuration(lastTrip['duracao_segundos'] as num?)}\n'
-                        '${lastBikeName ?? 'Moto não informada'}',
-                      ),
-                      isThreeLine: true,
                     ),
                   ),
               ],
@@ -223,19 +335,47 @@ class _HomePageState extends State<HomePage> {
 }
 
 class _Summary extends StatelessWidget {
-  const _Summary({required this.icon, required this.value, required this.label});
+  const _Summary({
+    required this.icon,
+    required this.value,
+    required this.label,
+  });
   final IconData icon;
   final String value;
   final String label;
 
   @override
-  Widget build(BuildContext context) => Column(
-    children: [
-      Icon(icon, color: HomePage.laranja, size: 28),
-      const SizedBox(height: 6),
-      Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-      const SizedBox(height: 2),
-      Text(label, style: const TextStyle(color: Colors.grey, fontSize: 12)),
-    ],
+  Widget build(BuildContext context) => Container(
+    constraints: const BoxConstraints(minHeight: 104),
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+    decoration: BoxDecoration(
+      color: Theme.of(context).colorScheme.surface,
+      borderRadius: BorderRadius.circular(17),
+      border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+    ),
+    child: Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(icon, color: HomePage.laranja, size: 22),
+        const SizedBox(height: 7),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            value,
+            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+          ),
+        ),
+        const SizedBox(height: 3),
+        Text(
+          label,
+          style: const TextStyle(
+            color: Color(0xFF8B8582),
+            fontSize: 9,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.4,
+          ),
+        ),
+      ],
+    ),
   );
 }
