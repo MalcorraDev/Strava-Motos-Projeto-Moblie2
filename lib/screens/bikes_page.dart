@@ -12,6 +12,7 @@ class BikesPage extends StatefulWidget {
 class _BikesPageState extends State<BikesPage> {
   List<Map<String, dynamic>> _bikes = [];
   bool _loading = true;
+  bool _premium = false;
   String? _error;
 
   @override
@@ -30,9 +31,18 @@ class _BikesPageState extends State<BikesPage> {
 
     try {
       final rows = await StravaApi.listarMotos();
+      var premium = false;
+      try {
+        premium = (await StravaApi.perfil())['premium'] == true;
+      } catch (_) {
+        // Keep the free experience if the profile cannot be refreshed.
+      }
 
       if (mounted) {
-        setState(() => _bikes = rows);
+        setState(() {
+          _bikes = rows;
+          _premium = premium;
+        });
       }
     } catch (e) {
       if (mounted) {
@@ -48,246 +58,47 @@ class _BikesPageState extends State<BikesPage> {
   }
 
   Future<void> _openBikeForm({Map<String, dynamic>? bike}) async {
-    final model = TextEditingController(
-      text: bike?['modelo']?.toString() ?? '',
-    );
-
-    final cc = TextEditingController(
-      text: bike?['cilindrada']?.toString() ?? '',
-    );
-
-    final consumption = TextEditingController(
-      text: bike?['consumo_km_l']?.toString() ?? '',
-    );
-
-    final formKey = GlobalKey<FormState>();
-
-    bool saving = false;
-
-    try {
-      await showModalBottomSheet<void>(
-        context: context,
-        isScrollControlled: true,
-        useSafeArea: true,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        builder: (sheetContext) {
-          return StatefulBuilder(
-            builder: (context, setSheetState) {
-              return Padding(
-                padding: EdgeInsets.only(
-                  bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-                  left: 20,
-                  right: 20,
-                  top: 20,
-                ),
-                child: Form(
-                  key: formKey,
-                  child: SingleChildScrollView(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          bike == null
-                              ? 'Cadastrar Motocicleta'
-                              : 'Editar Motocicleta',
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 15),
-
-                        TextFormField(
-                          controller: model,
-                          decoration: const InputDecoration(
-                            labelText: 'Modelo',
-                            border: OutlineInputBorder(),
-                          ),
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'Informe o modelo.';
-                            }
-                            return null;
-                          },
-                        ),
-
-                        const SizedBox(height: 12),
-
-                        TextFormField(
-                          controller: cc,
-                          keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(
-                            labelText: 'Cilindrada (cc)',
-                            border: OutlineInputBorder(),
-                          ),
-                          validator: (value) {
-                            final cilindrada = int.tryParse(value ?? '');
-
-                            if (cilindrada == null || cilindrada <= 0) {
-                              return 'Informe uma cilindrada válida.';
-                            }
-
-                            return null;
-                          },
-                        ),
-
-                        const SizedBox(height: 12),
-
-                        TextFormField(
-                          controller: consumption,
-                          keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true,
-                          ),
-                          decoration: const InputDecoration(
-                            labelText: 'Consumo (km/L, opcional)',
-                            border: OutlineInputBorder(),
-                          ),
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return null;
-                            }
-
-                            final consumo = double.tryParse(
-                              value.trim().replaceAll(',', '.'),
-                            );
-
-                            if (consumo == null || consumo <= 0) {
-                              return 'Informe um consumo válido.';
-                            }
-
-                            return null;
-                          },
-                        ),
-
-                        const SizedBox(height: 20),
-
-                        SizedBox(
-                          width: double.infinity,
-                          height: 50,
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: HomePage.laranja,
-                              foregroundColor: Colors.white,
-                            ),
-                            onPressed: saving
-                                ? null
-                                : () async {
-                                    if (!formKey.currentState!.validate()) {
-                                      return;
-                                    }
-
-                                    setSheetState(() {
-                                      saving = true;
-                                    });
-
-                                    try {
-                                      final modelo = model.text.trim();
-
-                                      final cilindrada = int.parse(
-                                        cc.text.trim(),
-                                      );
-
-                                      final consumoTexto = consumption.text
-                                          .trim()
-                                          .replaceAll(',', '.');
-
-                                      final double? consumo =
-                                          consumoTexto.isEmpty
-                                          ? null
-                                          : double.parse(consumoTexto);
-
-                                      if (bike == null) {
-                                        await StravaApi.criarMoto(
-                                          modelo: modelo,
-                                          cilindrada: cilindrada,
-                                          consumo: consumo,
-                                        );
-                                      } else {
-                                        await StravaApi.editarMoto(
-                                          bike['id'].toString(),
-                                          {
-                                            'modelo': modelo,
-                                            'cilindrada': cilindrada,
-                                            'consumo_km_l': consumo,
-                                          },
-                                        );
-                                      }
-
-                                      if (!sheetContext.mounted) {
-                                        return;
-                                      }
-
-                                      Navigator.of(sheetContext).pop();
-
-                                      if (mounted) {
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          SnackBar(
-                                            content: Text(
-                                              bike == null
-                                                  ? 'Motocicleta cadastrada com sucesso!'
-                                                  : 'Motocicleta atualizada com sucesso!',
-                                            ),
-                                          ),
-                                        );
-
-                                        await _load();
-                                      }
-                                    } catch (e) {
-                                      if (!sheetContext.mounted) {
-                                        return;
-                                      }
-
-                                      ScaffoldMessenger.of(
-                                        sheetContext,
-                                      ).showSnackBar(
-                                        SnackBar(
-                                          content: Text(
-                                            e.toString().replaceFirst(
-                                              'Exception: ',
-                                              '',
-                                            ),
-                                          ),
-                                        ),
-                                      );
-                                    } finally {
-                                      // O formulário pode ter sido fechado.
-                                      // Nunca atualizar o estado depois disso.
-                                      if (sheetContext.mounted) {
-                                        setSheetState(() {
-                                          saving = false;
-                                        });
-                                      }
-                                    }
-                                  },
-                            child: Text(
-                              saving
-                                  ? 'SALVANDO...'
-                                  : bike == null
-                                  ? 'CADASTRAR'
-                                  : 'SALVAR ALTERAÇÕES',
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(height: 10),
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            },
-          );
+    final saved = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => _BikeFormSheet(
+        bike: bike,
+        premium: _premium,
+        onSave: (values) async {
+          if (bike == null) {
+            await StravaApi.criarMoto(
+              modelo: values['modelo'] as String,
+              cilindrada: values['cilindrada'] as int,
+              consumo: _premium ? values['consumo_km_l'] as double? : null,
+              placa: values['placa'] as String?,
+              ano: values['ano'] as int?,
+              cor: values['cor'] as String?,
+              capacidadeTanque: values['capacidade_tanque_litros'] as double?,
+            );
+          } else {
+            final update = Map<String, dynamic>.from(values);
+            if (!_premium) update.remove('consumo_km_l');
+            await StravaApi.editarMoto(bike['id'].toString(), update);
+          }
         },
+      ),
+    );
+
+    if (saved == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            bike == null
+                ? 'Motocicleta cadastrada com sucesso!'
+                : 'Motocicleta atualizada com sucesso!',
+          ),
+        ),
       );
-    } finally {
-      model.dispose();
-      cc.dispose();
-      consumption.dispose();
+      await _load();
     }
   }
 
@@ -499,7 +310,14 @@ class _BikesPageState extends State<BikesPage> {
                                   runSpacing: 6,
                                   children: [
                                     _BikeTag(label: '$cc cc'),
-                                    _BikeTag(label: consumo),
+                                    if (bike['placa']?.toString().isNotEmpty ==
+                                        true)
+                                      _BikeTag(label: bike['placa'].toString()),
+                                    if (bike['ano'] != null)
+                                      _BikeTag(label: bike['ano'].toString()),
+                                    if (_premium &&
+                                        bike['consumo_km_l'] != null)
+                                      _BikeTag(label: consumo),
                                   ],
                                 ),
                               ],
@@ -554,6 +372,324 @@ class _BikesPageState extends State<BikesPage> {
   }
 }
 
+class _BikeFormSheet extends StatefulWidget {
+  const _BikeFormSheet({
+    required this.bike,
+    required this.premium,
+    required this.onSave,
+  });
+
+  final Map<String, dynamic>? bike;
+  final bool premium;
+  final Future<void> Function(Map<String, dynamic> values) onSave;
+
+  @override
+  State<_BikeFormSheet> createState() => _BikeFormSheetState();
+}
+
+class _BikeFormSheetState extends State<_BikeFormSheet> {
+  late final TextEditingController _modelController;
+  late final TextEditingController _ccController;
+  late final TextEditingController _consumptionController;
+  late final TextEditingController _plateController;
+  late final TextEditingController _yearController;
+  late final TextEditingController _colorController;
+  late final TextEditingController _tankController;
+  final _formKey = GlobalKey<FormState>();
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _modelController = TextEditingController(
+      text: widget.bike?['modelo']?.toString() ?? '',
+    );
+    _ccController = TextEditingController(
+      text: widget.bike?['cilindrada']?.toString() ?? '',
+    );
+    _consumptionController = TextEditingController(
+      text: widget.bike?['consumo_km_l']?.toString() ?? '',
+    );
+    _plateController = TextEditingController(
+      text: widget.bike?['placa']?.toString() ?? '',
+    );
+    _yearController = TextEditingController(
+      text: widget.bike?['ano']?.toString() ?? '',
+    );
+    _colorController = TextEditingController(
+      text: widget.bike?['cor']?.toString() ?? '',
+    );
+    _tankController = TextEditingController(
+      text: widget.bike?['capacidade_tanque_litros']?.toString() ?? '',
+    );
+  }
+
+  @override
+  void dispose() {
+    _modelController.dispose();
+    _ccController.dispose();
+    _consumptionController.dispose();
+    _plateController.dispose();
+    _yearController.dispose();
+    _colorController.dispose();
+    _tankController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (_saving || !(_formKey.currentState?.validate() ?? false)) return;
+
+    setState(() => _saving = true);
+    try {
+      final consumptionText = _consumptionController.text.trim().replaceAll(
+        ',',
+        '.',
+      );
+      final plate = _plateController.text.trim().toUpperCase().replaceAll(
+        RegExp(r'[^A-Z0-9]'),
+        '',
+      );
+      final year = _yearController.text.trim();
+      final tankText = _tankController.text.trim().replaceAll(',', '.');
+      await widget.onSave({
+        'modelo': _modelController.text.trim(),
+        'cilindrada': int.parse(_ccController.text.trim()),
+        if (widget.premium)
+          'consumo_km_l': consumptionText.isEmpty
+              ? null
+              : double.parse(consumptionText),
+        'placa': plate.isEmpty ? null : plate,
+        'ano': year.isEmpty ? null : int.parse(year),
+        'cor': _colorController.text.trim().isEmpty
+            ? null
+            : _colorController.text.trim(),
+        'capacidade_tanque_litros': tankText.isEmpty
+            ? null
+            : double.parse(tankText),
+      });
+      if (mounted) Navigator.of(context).pop(true);
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(error.toString().replaceFirst('Exception: ', '')),
+        ),
+      );
+      setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+        left: 20,
+        right: 20,
+        top: 20,
+      ),
+      child: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                widget.bike == null
+                    ? 'Cadastrar Motocicleta'
+                    : 'Editar Motocicleta',
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 15),
+              TextFormField(
+                controller: _modelController,
+                textCapitalization: TextCapitalization.words,
+                maxLength: 80,
+                decoration: const InputDecoration(
+                  labelText: 'Modelo',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) => value == null || value.trim().isEmpty
+                    ? 'Informe o modelo.'
+                    : null,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _ccController,
+                keyboardType: TextInputType.number,
+                maxLength: 4,
+                decoration: const InputDecoration(
+                  labelText: 'Cilindrada (cc)',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) {
+                  final cc = int.tryParse(value ?? '');
+                  return cc == null || cc <= 0 || cc > 9999
+                      ? 'Informe uma cilindrada válida.'
+                      : null;
+                },
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _plateController,
+                textCapitalization: TextCapitalization.characters,
+                maxLength: 7,
+                decoration: const InputDecoration(
+                  labelText: 'Placa (opcional)',
+                  hintText: 'ABC1D23',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) {
+                  final plate = (value ?? '').toUpperCase().replaceAll(
+                    RegExp(r'[^A-Z0-9]'),
+                    '',
+                  );
+                  if (plate.isEmpty) return null;
+                  return RegExp(
+                        r'^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$',
+                      ).hasMatch(plate)
+                      ? null
+                      : 'Informe placa no padrão ABC1234 ou ABC1D23.';
+                },
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _yearController,
+                      keyboardType: TextInputType.number,
+                      maxLength: 4,
+                      decoration: const InputDecoration(
+                        labelText: 'Ano',
+                        hintText: '2024',
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) return null;
+                        final year = int.tryParse(value.trim());
+                        return year == null ||
+                                year < 1900 ||
+                                year > DateTime.now().year + 1
+                            ? 'Ano inválido.'
+                            : null;
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _colorController,
+                      textCapitalization: TextCapitalization.words,
+                      maxLength: 40,
+                      decoration: const InputDecoration(
+                        labelText: 'Cor',
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (value) =>
+                          value != null &&
+                              value.trim().isNotEmpty &&
+                              value.trim().length < 2
+                          ? 'Cor inválida.'
+                          : null,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _tankController,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                decoration: const InputDecoration(
+                  labelText: 'Capacidade do tanque (L)',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) return null;
+                  final capacity = double.tryParse(
+                    value.trim().replaceAll(',', '.'),
+                  );
+                  return capacity == null || capacity < 1 || capacity > 100
+                      ? 'Informe de 1 a 100 litros.'
+                      : null;
+                },
+              ),
+              const SizedBox(height: 12),
+              if (widget.premium)
+                TextFormField(
+                  controller: _consumptionController,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  decoration: const InputDecoration(
+                    labelText: 'Consumo (km/L, opcional)',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) return null;
+                    final consumption = double.tryParse(
+                      value.trim().replaceAll(',', '.'),
+                    );
+                    return consumption == null ||
+                            consumption <= 0 ||
+                            consumption > 100
+                        ? 'Informe um consumo válido.'
+                        : null;
+                  },
+                )
+              else
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? const Color(0xFF26292E)
+                        : const Color(0xFFFFF0E9),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.lock_outline_rounded, color: HomePage.laranja),
+                      SizedBox(width: 10),
+                      Expanded(
+                        child: Text('Consumo médio km/L é um recurso Premium.'),
+                      ),
+                    ],
+                  ),
+                ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: HomePage.laranja,
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: _saving ? null : _submit,
+                  child: Text(
+                    _saving
+                        ? 'SALVANDO...'
+                        : widget.bike == null
+                        ? 'CADASTRAR'
+                        : 'SALVAR ALTERAÇÕES',
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _BikeTag extends StatelessWidget {
   const _BikeTag({required this.label});
 
@@ -564,15 +700,19 @@ class _BikeTag extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF0E9),
+        color: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF26292E)
+            : const Color(0xFFFFF0E9),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
         label,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: const TextStyle(
-          color: Color(0xFF8E3B20),
+        style: TextStyle(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? const Color(0xFFFF8A5B)
+              : const Color(0xFF8E3B20),
           fontSize: 10,
           fontWeight: FontWeight.w700,
         ),

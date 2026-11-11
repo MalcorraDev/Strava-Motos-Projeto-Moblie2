@@ -28,32 +28,44 @@ class StravaApi {
     late http.Response response;
     try {
       if (method == 'GET') {
-        response = await http.get(uri, headers: headers).timeout(const Duration(seconds: 20));
+        response = await http
+            .get(uri, headers: headers)
+            .timeout(const Duration(seconds: 20));
       } else if (method == 'POST') {
-        response = await http.post(uri, headers: headers, body: jsonEncode(body)).timeout(const Duration(seconds: 20));
+        response = await http
+            .post(uri, headers: headers, body: jsonEncode(body))
+            .timeout(const Duration(seconds: 20));
       } else if (method == 'PATCH') {
-        response = await http.patch(uri, headers: headers, body: jsonEncode(body)).timeout(const Duration(seconds: 20));
+        response = await http
+            .patch(uri, headers: headers, body: jsonEncode(body))
+            .timeout(const Duration(seconds: 20));
       } else {
-        response = await http.delete(uri, headers: headers).timeout(const Duration(seconds: 20));
+        response = await http
+            .delete(uri, headers: headers)
+            .timeout(const Duration(seconds: 20));
       }
     } catch (error) {
-      throw Exception('Não foi possível acessar a API. Verifique a publicação e sua conexão. ($error)');
+      throw Exception(
+        'Não foi possível acessar a API. Verifique a publicação e sua conexão. ($error)',
+      );
     }
 
     dynamic decoded;
     try {
-      decoded = response.body.isEmpty ? <String, dynamic>{} : jsonDecode(response.body);
+      decoded = response.body.isEmpty
+          ? <String, dynamic>{}
+          : jsonDecode(response.body);
     } catch (_) {
-      throw Exception('A API retornou uma resposta inválida (HTTP ${response.statusCode}).');
+      throw Exception(
+        'A API retornou uma resposta inválida (HTTP ${response.statusCode}).',
+      );
     }
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
       final message = decoded is Map
           ? (decoded['error'] ?? 'Erro HTTP ${response.statusCode}').toString()
           : 'Erro HTTP ${response.statusCode}.';
-      throw Exception(
-        '$message (HTTP ${response.statusCode}; $method $path)',
-      );
+      throw Exception('$message (HTTP ${response.statusCode}; $method $path)');
     }
     return decoded;
   }
@@ -67,22 +79,44 @@ class StravaApi {
     required String modelo,
     required int cilindrada,
     double? consumo,
+    String? placa,
+    int? ano,
+    String? cor,
+    double? capacidadeTanque,
   }) async {
     final response = await _request(
       '/api/motocicletas',
       method: 'POST',
-      body: {'modelo': modelo, 'cilindrada': cilindrada, 'consumo_km_l': consumo},
+      body: {
+        'modelo': modelo,
+        'cilindrada': cilindrada,
+        'consumo_km_l': consumo,
+        'placa': placa,
+        'ano': ano,
+        'cor': cor,
+        'capacidade_tanque_litros': capacidadeTanque,
+      },
     );
     return Map<String, dynamic>.from(response['data']);
   }
 
-  static Future<Map<String, dynamic>> editarMoto(String id, Map<String, dynamic> body) async {
-    final response = await _request('/api/motocicletas/${Uri.encodeComponent(id)}', method: 'PATCH', body: body);
+  static Future<Map<String, dynamic>> editarMoto(
+    String id,
+    Map<String, dynamic> body,
+  ) async {
+    final response = await _request(
+      '/api/motocicletas/${Uri.encodeComponent(id)}',
+      method: 'PATCH',
+      body: body,
+    );
     return Map<String, dynamic>.from(response['data']);
   }
 
   static Future<void> excluirMoto(String id) async {
-    await _request('/api/motocicletas/${Uri.encodeComponent(id)}', method: 'DELETE');
+    await _request(
+      '/api/motocicletas/${Uri.encodeComponent(id)}',
+      method: 'DELETE',
+    );
   }
 
   static Future<List<Map<String, dynamic>>> listarViagens() async {
@@ -90,7 +124,9 @@ class StravaApi {
     return List<Map<String, dynamic>>.from(response['data'] ?? const []);
   }
 
-  static Future<Map<String, dynamic>> criarViagem(Map<String, dynamic> body) async {
+  static Future<Map<String, dynamic>> criarViagem(
+    Map<String, dynamic> body,
+  ) async {
     final response = await _request('/api/viagens', method: 'POST', body: body);
     return Map<String, dynamic>.from(response['data']);
   }
@@ -99,8 +135,15 @@ class StravaApi {
     await _request('/api/viagens/${Uri.encodeComponent(id)}', method: 'DELETE');
   }
 
-  static Future<Map<String, dynamic>> editarViagem(String id, Map<String, dynamic> body) async {
-    final response = await _request('/api/viagens/${Uri.encodeComponent(id)}', method: 'PATCH', body: body);
+  static Future<Map<String, dynamic>> editarViagem(
+    String id,
+    Map<String, dynamic> body,
+  ) async {
+    final response = await _request(
+      '/api/viagens/${Uri.encodeComponent(id)}',
+      method: 'PATCH',
+      body: body,
+    );
     return Map<String, dynamic>.from(response['data']);
   }
 

@@ -28,11 +28,13 @@ class _ActiveRidePageState extends State<ActiveRidePage> {
   String? _selectedBikeId;
 
   bool _paused = false;
+  bool _starting = false;
   bool _saving = false;
   bool _loadingBikes = true;
   bool _rideStarted = false;
   bool _mapReady = false;
   bool _backgroundLocationEnabled = false;
+  bool _premium = false;
   String? _gpsError;
   double _distanceMeters = 0;
   int _movingMilliseconds = 0;
@@ -41,6 +43,7 @@ class _ActiveRidePageState extends State<ActiveRidePage> {
   final List<LatLng> _track = [];
   final List<Map<String, dynamic>> _trackPayload = [];
   Position? _lastPosition;
+  Position? _currentPosition;
 
   DateTime? _startTime;
 
@@ -71,8 +74,30 @@ class _ActiveRidePageState extends State<ActiveRidePage> {
   @override
   void initState() {
     super.initState();
-
     _loadBikes();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _prepareLocation(requestBackground: false).then((ready) async {
+        if (!ready || !mounted) return;
+        try {
+          final position = await Geolocator.getCurrentPosition(
+            locationSettings: const LocationSettings(
+              accuracy: LocationAccuracy.bestForNavigation,
+              timeLimit: Duration(seconds: 20),
+            ),
+          );
+          if (mounted) _onPosition(position);
+        } catch (error) {
+          if (mounted) {
+            setState(() => _gpsError = 'Aguardando posição GPS: $error');
+          }
+        }
+      });
+      StravaApi.perfil()
+          .then((profile) {
+            if (mounted) setState(() => _premium = profile['premium'] == true);
+          })
+          .catchError((_) {});
+    });
   }
 
   Future<void> _loadBikes() async {
@@ -101,74 +126,140 @@ class _ActiveRidePageState extends State<ActiveRidePage> {
     }
   }
 
-  Future<bool> _prepareLocation() async {
-    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!mounted) return false;
-    if (!serviceEnabled) {
-      setState(() => _gpsError = 'Ative o GPS do aparelho para iniciar.');
-      return false;
-    }
-
-    var permission = await Geolocator.checkPermission();
-    if (!mounted) return false;
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
+  Future<bool> _prepareLocation({bool requestBackground = true}) async {
+    try {
+      var serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!mounted) return false;
-    }
-    if (permission == LocationPermission.denied ||
-        permission == LocationPermission.deniedForever) {
-      setState(
-        () => _gpsError = permission == LocationPermission.deniedForever
-            ? 'Permissão negada permanentemente. Libere a localização nas configurações do aparelho.'
-            : 'Permita o acesso à localização para gravar a viagem.',
-      );
-      return false;
-    }
-
-    _backgroundLocationEnabled = false;
-    if (!kIsWeb &&
-        defaultTargetPlatform == TargetPlatform.android &&
-        permission != LocationPermission.always) {
-      final openSettings = await showDialog<bool>(
-        context: context,
-        builder: (dialogContext) => AlertDialog(
-          title: const Text('Rastreamento em segundo plano'),
-          content: const Text(
-            'Para continuar gravando com a tela bloqueada, o Android precisa da permissão "Permitir o tempo todo". Você também pode continuar com o app aberto.',
+      if (!serviceEnabled) {
+        final openSettings = await showDialog<bool>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: const Text('Ative a localização'),
+            content: const Text(
+              'O GPS do aparelho está desligado. Ative a localização para registrar esta viagem.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: const Text('Agora não'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(dialogContext, true),
+                child: const Text('Abrir configurações'),
+              ),
+            ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext, false),
-              child: const Text('Só com o app aberto'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(dialogContext, true),
-              child: const Text('Abrir configurações'),
-            ),
-          ],
-        ),
-      );
-      if (!mounted) return false;
-      if (openSettings == true) {
-        await Geolocator.openAppSettings();
+        );
         if (!mounted) return false;
-        permission = await Geolocator.checkPermission();
-        if (!mounted) return false;
-        if (permission != LocationPermission.always) {
-          setState(
-            () => _gpsError =
-                'Ative "Permitir o tempo todo" nas permissões de localização para gravar com a tela bloqueada.',
-          );
+        if (openSettings == true) {
+          await Geolocator.openLocationSettings();
+          if (!mounted) return false;
+          serviceEnabled = await Geolocator.isLocationServiceEnabled();
+        }
+        if (!serviceEnabled) {
+          setState(() => _gpsError = 'Ative o GPS do aparelho para iniciar.');
           return false;
         }
       }
-      _backgroundLocationEnabled = permission == LocationPermission.always;
+
+      var permission = await Geolocator.checkPermission();
+      if (!mounted) return false;
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.unableToDetermine) {
+        // Ao entrar nesta tela, solicita a permissão de localização em primeiro plano.
+        permission = await Geolocator.requestPermission();
+        if (!mounted) return false;
+      }
+      if (permission == LocationPermission.deniedForever) {
+        final openSettings = await showDialog<bool>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: const Text('Permissão de localização bloqueada'),
+            content: const Text(
+              'O Android não exibirá novamente a solicitação. Libere a localização nas configurações do aplicativo para gravar viagens.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: const Text('Cancelar'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(dialogContext, true),
+                child: const Text('Abrir configurações'),
+              ),
+            ],
+          ),
+        );
+        if (!mounted) return false;
+        if (openSettings == true) await Geolocator.openAppSettings();
+        if (mounted) {
+          setState(
+            () => _gpsError =
+                'Permita a localização nas configurações e toque em Iniciar viagem novamente.',
+          );
+        }
+        return false;
+      }
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.unableToDetermine) {
+        setState(
+          () => _gpsError =
+              'Permita o acesso à localização para gravar a viagem.',
+        );
+        return false;
+      }
+
+      _backgroundLocationEnabled = false;
+      if (requestBackground &&
+          !kIsWeb &&
+          defaultTargetPlatform == TargetPlatform.android &&
+          permission != LocationPermission.always) {
+        final openSettings = await showDialog<bool>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: const Text('Rastreamento em segundo plano'),
+            content: const Text(
+              'Para continuar gravando com a tela bloqueada, o Android precisa da permissão “Permitir o tempo todo”. Você também pode continuar com o app aberto.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: const Text('Só com o app aberto'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(dialogContext, true),
+                child: const Text('Abrir configurações'),
+              ),
+            ],
+          ),
+        );
+        if (!mounted) return false;
+        if (openSettings == true) {
+          await Geolocator.openAppSettings();
+          if (!mounted) return false;
+          permission = await Geolocator.checkPermission();
+          if (!mounted) return false;
+          if (permission != LocationPermission.always) {
+            setState(
+              () => _gpsError =
+                  'Ative “Permitir o tempo todo” nas permissões de localização para gravar com a tela bloqueada.',
+            );
+            return false;
+          }
+        }
+        _backgroundLocationEnabled = permission == LocationPermission.always;
+      }
+      return true;
+    } catch (error) {
+      if (mounted) {
+        setState(() => _gpsError = 'Não foi possível preparar o GPS: $error');
+      }
+      return false;
     }
-    return true;
   }
 
   Future<void> _startRide() async {
-    if (_loadingBikes) {
+    if (_starting || _loadingBikes) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Aguarde o carregamento das motocicletas.'),
@@ -193,28 +284,45 @@ class _ActiveRidePageState extends State<ActiveRidePage> {
       return;
     }
 
-    if (!await _prepareLocation() || !mounted) return;
+    setState(() => _starting = true);
+    try {
+      if (!await _prepareLocation() || !mounted) return;
 
-    setState(() {
-      _rideStarted = true;
-      _paused = false;
-      _startTime = DateTime.now();
-      _gpsError = null;
-    });
+      setState(() {
+        _rideStarted = true;
+        _paused = false;
+        _startTime = DateTime.now();
+        _gpsError = null;
+      });
 
-    _subscribeLocation(_locationSettings);
+      await _subscribeLocation(_locationSettings);
+      if (!mounted) return;
 
-    _stopwatch.start();
-    _timer?.cancel();
-    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted && _rideStarted && !_paused) {
-        setState(() {});
+      _stopwatch.start();
+      _timer?.cancel();
+      _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+        if (mounted && _rideStarted && !_paused) {
+          setState(() {});
+        }
+      });
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _rideStarted = false;
+          _gpsError = 'Não foi possível iniciar o rastreamento GPS: $error';
+        });
       }
-    });
+    } finally {
+      if (mounted) setState(() => _starting = false);
+    }
   }
 
-  void _subscribeLocation(LocationSettings settings) {
-    _locationSubscription?.cancel();
+  Future<void> _subscribeLocation(LocationSettings settings) async {
+    final previousSubscription = _locationSubscription;
+    _locationSubscription = null;
+    await previousSubscription?.cancel();
+    if (!mounted || !_rideStarted || _paused) return;
+
     _locationSubscription =
         Geolocator.getPositionStream(locationSettings: settings).listen(
           _onPosition,
@@ -227,15 +335,35 @@ class _ActiveRidePageState extends State<ActiveRidePage> {
   }
 
   void _onPosition(Position position) {
-    if (!mounted || !_rideStarted || _paused) return;
+    if (!mounted || (_rideStarted && _paused)) return;
     if (position.latitude.isNaN ||
         position.longitude.isNaN ||
-        position.accuracy <= 0 ||
-        position.accuracy > 50) {
+        position.accuracy < 0) {
+      return;
+    }
+    _currentPosition = position;
+    final point = LatLng(position.latitude, position.longitude);
+    if (_mapReady) _mapController.move(point, 16);
+    if (!_rideStarted) {
+      setState(
+        () => _gpsError = position.accuracy > 50
+            ? 'Localização encontrada, mas o sinal ainda está impreciso.'
+            : null,
+      );
+      return;
+    }
+    if (position.accuracy <= 0) return;
+    if (position.accuracy > 50) {
+      if (_gpsError !=
+          'Sinal GPS fraco. Vá para uma área aberta para obter melhor precisão.') {
+        setState(
+          () => _gpsError =
+              'Sinal GPS fraco. Vá para uma área aberta para obter melhor precisão.',
+        );
+      }
       return;
     }
 
-    final point = LatLng(position.latitude, position.longitude);
     final previous = _lastPosition;
     var speed = 0.0;
     if (previous != null) {
@@ -297,20 +425,22 @@ class _ActiveRidePageState extends State<ActiveRidePage> {
         '${remainingSeconds.toString().padLeft(2, '0')}';
   }
 
-  void _togglePause() {
+  Future<void> _togglePause() async {
     if (!_rideStarted || _saving) return;
 
     if (_paused) {
       _stopwatch.start();
       _lastPosition = null;
-      _subscribeLocation(_locationSettings);
+      setState(() => _paused = false);
+      await _subscribeLocation(_locationSettings);
     } else {
       _stopwatch.stop();
       _currentSpeedKmh = 0;
-      _locationSubscription?.cancel();
+      setState(() => _paused = true);
+      final subscription = _locationSubscription;
+      _locationSubscription = null;
+      await subscription?.cancel();
     }
-
-    setState(() => _paused = !_paused);
   }
 
   Future<void> _finishRide() async {
@@ -321,7 +451,8 @@ class _ActiveRidePageState extends State<ActiveRidePage> {
       if (bike['id'] == _selectedBikeId) selectedBike = bike;
     }
     final consumption = (selectedBike?['consumo_km_l'] as num?)?.toDouble();
-    final estimatedFuelLiters = consumption != null && consumption > 0
+    final estimatedFuelLiters =
+        _premium && consumption != null && consumption > 0
         ? (_distanceMeters / 1000) / consumption
         : null;
 
@@ -331,7 +462,11 @@ class _ActiveRidePageState extends State<ActiveRidePage> {
         title: const Text('Finalizar viagem?'),
         content: Text(
           'O tempo registrado foi de ${_formatDuration(_seconds)}. '
-          '${estimatedFuelLiters == null ? 'Cadastre o consumo km/L da moto para ver a estimativa de combustível.' : 'Consumo estimado: ${estimatedFuelLiters.toStringAsFixed(2)} L.'} '
+          '${!_premium
+              ? 'Estimativa de combustível é exclusiva do Premium.'
+              : estimatedFuelLiters == null
+              ? 'Cadastre o consumo km/L da moto para ver a estimativa de combustível.'
+              : 'Consumo estimado: ${estimatedFuelLiters.toStringAsFixed(2)} L.'} '
           'Deseja salvar esta viagem?',
         ),
         actions: [
@@ -379,8 +514,9 @@ class _ActiveRidePageState extends State<ActiveRidePage> {
         'velocidade_media': double.parse(averageSpeed.toStringAsFixed(2)),
         'velocidade_maxima': double.parse(_maxSpeedKmh.toStringAsFixed(2)),
         if (estimatedFuelLiters != null)
-          'combustivel_estimado_litros':
-              double.parse(estimatedFuelLiters.toStringAsFixed(3)),
+          'combustivel_estimado_litros': double.parse(
+            estimatedFuelLiters.toStringAsFixed(3),
+          ),
         'pontos_gps': _trackPayload,
         'motocicleta_id': _selectedBikeId,
       };
@@ -404,8 +540,9 @@ class _ActiveRidePageState extends State<ActiveRidePage> {
       if (!_paused) {
         _stopwatch.start();
         _lastPosition = null;
-        _subscribeLocation(_locationSettings);
+        await _subscribeLocation(_locationSettings);
       }
+      if (!mounted) return;
 
       _timer?.cancel();
       _timer = Timer.periodic(const Duration(seconds: 1), (_) {
@@ -452,14 +589,23 @@ class _ActiveRidePageState extends State<ActiveRidePage> {
                   FlutterMap(
                     mapController: _mapController,
                     options: MapOptions(
-                      initialCenter: _track.isEmpty
-                          ? const LatLng(-23.5505, -46.6333)
-                          : _track.last,
-                      initialZoom: 13,
+                      initialCenter: _currentPosition == null
+                          ? const LatLng(0, 0)
+                          : LatLng(
+                              _currentPosition!.latitude,
+                              _currentPosition!.longitude,
+                            ),
+                      initialZoom: _currentPosition == null ? 2 : 16,
                       onMapReady: () {
                         _mapReady = true;
-                        if (_track.isNotEmpty) {
-                          _mapController.move(_track.last, 16);
+                        if (_currentPosition != null) {
+                          _mapController.move(
+                            LatLng(
+                              _currentPosition!.latitude,
+                              _currentPosition!.longitude,
+                            ),
+                            16,
+                          );
                         }
                       },
                     ),
@@ -479,6 +625,53 @@ class _ActiveRidePageState extends State<ActiveRidePage> {
                             ),
                           ],
                         ),
+                      if (_currentPosition != null)
+                        CircleLayer(
+                          circles: [
+                            CircleMarker(
+                              point: LatLng(
+                                _currentPosition!.latitude,
+                                _currentPosition!.longitude,
+                              ),
+                              radius: _currentPosition!.accuracy
+                                  .clamp(8.0, 70.0)
+                                  .toDouble(),
+                              useRadiusInMeter: true,
+                              color: const Color(0x331D75F0),
+                              borderColor: const Color(0xFF1D75F0),
+                              borderStrokeWidth: 1.5,
+                            ),
+                          ],
+                        ),
+                      if (_currentPosition != null)
+                        MarkerLayer(
+                          markers: [
+                            Marker(
+                              point: LatLng(
+                                _currentPosition!.latitude,
+                                _currentPosition!.longitude,
+                              ),
+                              width: 34,
+                              height: 34,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF1D75F0),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: Colors.white,
+                                    width: 4,
+                                  ),
+                                  boxShadow: const [
+                                    BoxShadow(
+                                      color: Colors.black38,
+                                      blurRadius: 8,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       const RichAttributionWidget(
                         attributions: [
                           TextSourceAttribution('© OpenStreetMap contributors'),
@@ -486,7 +679,7 @@ class _ActiveRidePageState extends State<ActiveRidePage> {
                       ),
                     ],
                   ),
-                  if (_track.isEmpty)
+                  if (_currentPosition == null)
                     Align(
                       alignment: Alignment.topCenter,
                       child: Container(
@@ -496,14 +689,17 @@ class _ActiveRidePageState extends State<ActiveRidePage> {
                           vertical: 8,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.92),
+                          color: const Color(
+                            0xFF1A1C20,
+                          ).withValues(alpha: 0.96),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Text(
-                          _rideStarted
-                              ? 'Aguardando sinal do GPS…'
-                              : 'O mapa centraliza no início da viagem.',
-                          style: const TextStyle(fontWeight: FontWeight.w600),
+                          _gpsError ?? 'Aguardando localização do aparelho…',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                     ),
@@ -513,10 +709,10 @@ class _ActiveRidePageState extends State<ActiveRidePage> {
                       child: Container(
                         margin: const EdgeInsets.all(12),
                         padding: const EdgeInsets.all(10),
-                        color: Colors.white,
+                        color: const Color(0xFF1A1C20),
                         child: Text(
                           _gpsError!,
-                          style: const TextStyle(color: Colors.red),
+                          style: const TextStyle(color: Color(0xFFFF6B6B)),
                         ),
                       ),
                     ),
@@ -526,8 +722,8 @@ class _ActiveRidePageState extends State<ActiveRidePage> {
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(20),
-              decoration: const BoxDecoration(
-                color: Colors.white,
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
                 borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
               ),
               child: Column(
@@ -574,6 +770,17 @@ class _ActiveRidePageState extends State<ActiveRidePage> {
                             });
                           },
                   ),
+                  if (!_rideStarted) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      _currentPosition == null
+                          ? 'Permita a localização para centralizar o mapa e iniciar a viagem.'
+                          : 'GPS localizado • precisão aproximada de ${_currentPosition!.accuracy.toStringAsFixed(0)} m',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 24),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -597,9 +804,22 @@ class _ActiveRidePageState extends State<ActiveRidePage> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton.icon(
-                        onPressed: _saving || _loadingBikes ? null : _startRide,
-                        icon: const Icon(Icons.play_arrow),
-                        label: const Text('INICIAR VIAGEM'),
+                        onPressed: _saving || _loadingBikes || _starting
+                            ? null
+                            : _startRide,
+                        icon: _starting
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Icon(Icons.play_arrow),
+                        label: Text(
+                          _starting ? 'PREPARANDO GPS...' : 'INICIAR VIAGEM',
+                        ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: HomePage.laranja,
                           foregroundColor: Colors.white,

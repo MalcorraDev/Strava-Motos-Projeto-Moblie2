@@ -114,11 +114,8 @@ class _HomePageState extends State<HomePage> {
                   height: 190,
                   clipBehavior: Clip.antiAlias,
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [Color(0xFF181818), Color(0xFF34302E)],
-                    ),
+                    color: const Color(0xFF1A1C20),
+                    border: Border.all(color: const Color(0xFF26292E)),
                     borderRadius: BorderRadius.circular(22),
                   ),
                   child: Stack(
@@ -351,7 +348,7 @@ class _Summary extends StatelessWidget {
     decoration: BoxDecoration(
       color: Theme.of(context).colorScheme.surface,
       borderRadius: BorderRadius.circular(17),
-      border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+      border: Border.all(color: const Color(0xFF26292E)),
     ),
     child: Column(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -362,7 +359,11 @@ class _Summary extends StatelessWidget {
           fit: BoxFit.scaleDown,
           child: Text(
             value,
-            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+            style: const TextStyle(
+              fontWeight: FontWeight.w800,
+              fontSize: 14,
+              fontFamily: 'monospace',
+            ),
           ),
         ),
         const SizedBox(height: 3),

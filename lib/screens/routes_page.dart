@@ -15,6 +15,8 @@ class RoutesPage extends StatefulWidget {
 
 class _RoutesPageState extends State<RoutesPage> {
   List<Map<String, dynamic>> _routes = [];
+  final TextEditingController _searchController = TextEditingController();
+  String _sort = 'Recentes';
   bool _loading = true;
   bool _premium = false;
   bool _offlineMode = false;
@@ -180,20 +182,43 @@ class _RoutesPageState extends State<RoutesPage> {
     return '$minutes min';
   }
 
-  Future<void> _edit(Map<String, dynamic> route) async {
-    final titleController = TextEditingController(
-      text: route['titulo']?.toString() ?? '',
-    );
-    List<Map<String, dynamic>> bikes = [];
-    String? selectedBikeId = route['motocicleta_id']?.toString();
-    bool loadingBikes = true;
-    bool saving = false;
+  List<Map<String, dynamic>> get _visibleRoutes {
+    final query = _searchController.text.trim().toLowerCase();
+    final result = _routes.where((route) {
+      final bike = route['motocicletas'];
+      final name = bike is Map ? bike['modelo']?.toString() ?? '' : '';
+      return query.isEmpty ||
+          (route['titulo']?.toString().toLowerCase().contains(query) ??
+              false) ||
+          name.toLowerCase().contains(query);
+    }).toList();
+    if (_sort == 'Maior distância') {
+      result.sort(
+        (a, b) => ((b['distancia_km'] as num?) ?? 0).compareTo(
+          (a['distancia_km'] as num?) ?? 0,
+        ),
+      );
+    } else if (_sort == 'Maior velocidade') {
+      result.sort(
+        (a, b) => ((b['velocidade_maxima'] as num?) ?? 0).compareTo(
+          (a['velocidade_maxima'] as num?) ?? 0,
+        ),
+      );
+    }
+    return result;
+  }
 
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _edit(Map<String, dynamic> route) async {
+    List<Map<String, dynamic>> bikes = [];
     try {
       bikes = await StravaApi.listarMotos();
-      loadingBikes = false;
     } catch (e) {
-      loadingBikes = false;
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -205,133 +230,21 @@ class _RoutesPageState extends State<RoutesPage> {
         );
       }
     }
-
-    final hasSelectedBike = bikes.any(
-      (bike) => bike['id'].toString() == selectedBikeId,
-    );
-    if (!hasSelectedBike) selectedBikeId = '';
-
-    if (!mounted) {
-      titleController.dispose();
-      return;
-    }
-    final messenger = ScaffoldMessenger.of(context);
+    if (!mounted) return;
     final result = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setDialogState) {
-          return AlertDialog(
-            title: const Text('Editar viagem'),
-            content: SizedBox(
-              width: 420,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: titleController,
-                    autofocus: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Nome da viagem',
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  DropdownButtonFormField<String>(
-                    initialValue: selectedBikeId,
-                    isExpanded: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Motocicleta',
-                      border: OutlineInputBorder(),
-                    ),
-                    hint: Text(
-                      loadingBikes
-                          ? 'Carregando motos...'
-                          : 'Selecione uma moto',
-                    ),
-                    items: [
-                      const DropdownMenuItem<String>(
-                        value: '',
-                        child: Text('Nenhuma motocicleta'),
-                      ),
-                      ...bikes.map(
-                        (bike) => DropdownMenuItem<String>(
-                          value: bike['id'].toString(),
-                          child: Text(
-                            '${bike['modelo'] ?? 'Moto'} - ${bike['cilindrada'] ?? '?'} cc',
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ),
-                    ],
-                    onChanged: saving || loadingBikes
-                        ? null
-                        : (value) =>
-                              setDialogState(() => selectedBikeId = value),
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: saving
-                    ? null
-                    : () => Navigator.pop(dialogContext, false),
-                child: const Text('Cancelar'),
-              ),
-              FilledButton.icon(
-                onPressed: saving || loadingBikes
-                    ? null
-                    : () async {
-                        final title = titleController.text.trim();
-                        if (title.isEmpty) {
-                          messenger.showSnackBar(
-                            const SnackBar(
-                              content: Text('Informe o nome da viagem.'),
-                            ),
-                          );
-                          return;
-                        }
-                        setDialogState(() => saving = true);
-                        try {
-                          await StravaApi.editarViagem(route['id'].toString(), {
-                            'titulo': title,
-                            'motocicleta_id':
-                                selectedBikeId == null ||
-                                    selectedBikeId!.isEmpty
-                                ? null
-                                : selectedBikeId,
-                          });
-                          if (dialogContext.mounted) {
-                            Navigator.pop(dialogContext, true);
-                          }
-                        } catch (e) {
-                          setDialogState(() => saving = false);
-                          messenger.showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                e.toString().replaceFirst('Exception: ', ''),
-                              ),
-                            ),
-                          );
-                        }
-                      },
-                icon: saving
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.save_outlined),
-                label: Text(saving ? 'Salvando...' : 'Salvar'),
-              ),
-            ],
-          );
+      builder: (_) => _RouteEditDialog(
+        route: route,
+        bikes: bikes,
+        onSave: (title, bikeId) async {
+          await StravaApi.editarViagem(route['id'].toString(), {
+            'titulo': title,
+            'motocicleta_id': bikeId,
+          });
         },
       ),
     );
-
-    titleController.dispose();
 
     if (result == true && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -454,7 +367,7 @@ class _RoutesPageState extends State<RoutesPage> {
         onRefresh: _load,
         child: ListView.builder(
           padding: const EdgeInsets.fromLTRB(18, 14, 18, 90),
-          itemCount: _routes.length + 1,
+          itemCount: _visibleRoutes.length + 1,
           itemBuilder: (context, index) {
             if (index == 0) {
               return Padding(
@@ -533,12 +446,53 @@ class _RoutesPageState extends State<RoutesPage> {
                         ],
                       ),
                     ),
+                    const SizedBox(height: 14),
+                    TextField(
+                      controller: _searchController,
+                      onChanged: (_) => setState(() {}),
+                      decoration: const InputDecoration(
+                        prefixIcon: Icon(Icons.search_rounded),
+                        hintText: 'Buscar viagem ou motocicleta',
+                        isDense: true,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          for (final filter in [
+                            'Recentes',
+                            'Maior distância',
+                            'Maior velocidade',
+                          ])
+                            Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: ChoiceChip(
+                                label: Text(filter),
+                                selected: _sort == filter,
+                                onSelected: (_) =>
+                                    setState(() => _sort = filter),
+                                selectedColor: HomePage.laranja.withValues(
+                                  alpha: 0.20,
+                                ),
+                                labelStyle: TextStyle(
+                                  color: _sort == filter
+                                      ? HomePage.laranja
+                                      : null,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               );
             }
 
-            final item = _routes[index - 1];
+            final item = _visibleRoutes[index - 1];
 
             final distance =
                 (item['distancia_km'] as num?)?.toStringAsFixed(1) ?? '0.0';
@@ -583,7 +537,9 @@ class _RoutesPageState extends State<RoutesPage> {
                         maxSpeed: '$max km/h',
                         movingTime: _duration(item['tempo_movimento_segundos']),
                         stoppedTime: _duration(item['tempo_parado_segundos']),
-                        fuelLiters: item['combustivel_estimado_litros'] is num
+                        fuelLiters:
+                            _premium &&
+                                item['combustivel_estimado_litros'] is num
                             ? '${(item['combustivel_estimado_litros'] as num).toStringAsFixed(2)} L'
                             : null,
                         points: points,
@@ -684,7 +640,6 @@ class _RoutesPageState extends State<RoutesPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Rotas e viagens'),
-        backgroundColor: Colors.white,
         elevation: 0,
         actions: [
           IconButton(
@@ -702,6 +657,146 @@ class _RoutesPageState extends State<RoutesPage> {
         child: const Icon(Icons.play_arrow),
       ),
       body: body,
+    );
+  }
+}
+
+class _RouteEditDialog extends StatefulWidget {
+  const _RouteEditDialog({
+    required this.route,
+    required this.bikes,
+    required this.onSave,
+  });
+
+  final Map<String, dynamic> route;
+  final List<Map<String, dynamic>> bikes;
+  final Future<void> Function(String title, String? bikeId) onSave;
+
+  @override
+  State<_RouteEditDialog> createState() => _RouteEditDialogState();
+}
+
+class _RouteEditDialogState extends State<_RouteEditDialog> {
+  late final TextEditingController _titleController;
+  late String _selectedBikeId;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _titleController = TextEditingController(
+      text: widget.route['titulo']?.toString() ?? '',
+    );
+    final savedBikeId = widget.route['motocicleta_id']?.toString();
+    _selectedBikeId =
+        widget.bikes.any((bike) => bike['id'].toString() == savedBikeId)
+        ? savedBikeId!
+        : '';
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    final title = _titleController.text.trim();
+    if (_saving) return;
+    if (title.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Informe o nome da viagem.')),
+      );
+      return;
+    }
+
+    setState(() => _saving = true);
+    try {
+      await widget.onSave(
+        title,
+        _selectedBikeId.isEmpty ? null : _selectedBikeId,
+      );
+      if (mounted) Navigator.pop(context, true);
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(error.toString().replaceFirst('Exception: ', '')),
+        ),
+      );
+      setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Editar viagem'),
+      content: SizedBox(
+        width: 420,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: _titleController,
+              autofocus: true,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: const InputDecoration(
+                labelText: 'Nome da viagem',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 16),
+            DropdownButtonFormField<String>(
+              initialValue: _selectedBikeId,
+              isExpanded: true,
+              decoration: const InputDecoration(
+                labelText: 'Motocicleta',
+                border: OutlineInputBorder(),
+              ),
+              items: [
+                const DropdownMenuItem<String>(
+                  value: '',
+                  child: Text('Nenhuma motocicleta'),
+                ),
+                ...widget.bikes.map(
+                  (bike) => DropdownMenuItem<String>(
+                    value: bike['id'].toString(),
+                    child: Text(
+                      '${bike['modelo'] ?? 'Moto'} - ${bike['cilindrada'] ?? '?'} cc',
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ),
+              ],
+              onChanged: _saving
+                  ? null
+                  : (value) {
+                      if (value != null) {
+                        setState(() => _selectedBikeId = value);
+                      }
+                    },
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _saving ? null : () => Navigator.pop(context, false),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton.icon(
+          onPressed: _saving ? null : _submit,
+          icon: _saving
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.save_outlined),
+          label: Text(_saving ? 'Salvando...' : 'Salvar'),
+        ),
+      ],
     );
   }
 }

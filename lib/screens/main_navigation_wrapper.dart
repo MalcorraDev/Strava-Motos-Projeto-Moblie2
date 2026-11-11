@@ -30,7 +30,7 @@ class _MainNavigationWrapperState extends State<MainNavigationWrapper> {
         selectedItemColor: HomePage.laranja,
         unselectedItemColor: Theme.of(context).colorScheme.onSurfaceVariant,
         backgroundColor: Theme.of(context).brightness == Brightness.dark
-            ? const Color(0xFF1A1716)
+            ? const Color(0xFF1A1C20)
             : const Color(0xFFFFF8F5),
         elevation: 12,
         iconSize: 23,

@@ -9,10 +9,10 @@ Fonte: `Requisitos Funcionais e Não Funcionais.pdf`, versão 1.0. Este checklis
 | RF01 | Persistir dados necessários no dispositivo conforme as funções disponíveis | Parcial | Dados principais ficam no Supabase; viagens marcadas para offline também são guardadas localmente por conta. Motos/perfil e viagens comuns ainda não têm cache local completo. |
 | RF02 | Entrar com conta Google | Parcial | OAuth web funciona; deep link `com.example.stravamotos://login-callback/` registrado no Android/iOS e usado pelo app. Adicionar URL à allowlist do Supabase e validar o retorno OAuth nos aparelhos. |
 | RF03 | Iniciar, pausar, retomar e finalizar viagem | Parcial | Fluxo e GPS em primeiro plano estão no app; requer publicar API/migration e validar no telefone. |
-| RF04 | Cadastrar uma ou mais motos com modelo, cilindrada e consumo | Implementado | CRUD existente pela API autenticada. |
+| RF04 | Cadastrar uma ou mais motos com modelo, cilindrada e consumo | Parcial | Modelo, cilindrada, placa, ano, cor e tanque têm CRUD e validação; consumo km/L foi restringido ao Premium. Aplicar migration de detalhes da moto e publicar API. |
 | RF05 | Registrar localização por GPS durante o percurso | Parcial | Coleta em primeiro plano implementada; teste Android e migration `pontos_gps` pendentes. |
 | RF06 | Detectar períodos em movimento e parado | Parcial | Estimativa por velocidade GPS (limiar de 3 km/h) adicionada; calibrar em teste real. |
-| RF07 | Exibir localização em tempo real no mapa | Parcial | Mapa OpenStreetMap e trilha ao vivo adicionados à tela de viagem; teste em Android pendente. |
+| RF07 | Exibir localização em tempo real no mapa | Parcial | Ao abrir a configuração da viagem o app solicita localização, centraliza no aparelho e mostra ponto azul com halo de precisão; trilha ao vivo. Validar em Android físico. |
 | RF08 | Continuar rastreando com app minimizado ou tela bloqueada | Parcial | Serviço de localização Android em primeiro plano, notificação persistente e permissão "Permitir o tempo todo" configurados; validar em aparelho. O app não recupera uma sessão após o Android encerrar o processo. |
 | RF09 | Exibir mapa do percurso depois de finalizar | Parcial | Detalhes agora desenham os pontos salvos; depende da migration e publicação da API. |
 | RF10 | Calcular e mostrar distância | Parcial | Soma de segmentos GPS implementada; validar precisão com celular. |
@@ -23,10 +23,10 @@ Fonte: `Requisitos Funcionais e Não Funcionais.pdf`, versão 1.0. Este checklis
 | RF15 | Ver detalhe com mapa, distância, duração e velocidades | Parcial | Tela de detalhes e mapa implementados; viagens antigas sem pontos mostram estado vazio. |
 | RF16 | Excluir atividades | Implementado | Exclusão de viagens pela API autenticada. |
 | RF17 | Editar motos | Implementado | Formulário e atualização existentes. |
-| RF18 | Contratar plano Premium | Pendente | Definir provedor, planos, loja de distribuição e fluxo de cobrança. |
+| RF18 | Contratar plano Premium | Parcial | Plano e bloqueios Free/Premium implementados usando `usuarios.premium`; checkout e confirmação de pagamento ainda precisam de provedor. |
 | RF19 | Usuário Premium baixar e salvar corridas offline | Parcial | Salva dados e pontos GPS localmente por conta e restringe o botão ao estado Premium retornado pela API; assinatura ainda não é comprovada por provedor de cobrança. |
 | RF20 | Abrir corridas já salvas offline, com bloqueio para novas cópias no plano gratuito | Parcial | Histórico cai para as rotas salvas localmente sem conexão e abre um traçado offline. O mapa de ruas/tiles não é baixado; a validação de assinatura ainda depende do provedor. |
-| RF21 | Restringir funções Premium a assinaturas ativas | Pendente | O campo `premium` sozinho não comprova pagamento; integrar validação server-side do provedor. |
+| RF21 | Restringir funções Premium a assinaturas ativas | Parcial | API bloqueia gravação/consulta de consumo e estimativa para contas Free; offline também é limitado no app. A ativação é administrativa via banco até integrar provedor de cobrança. |
 
 ## Requisitos não funcionais
 
@@ -53,11 +53,15 @@ Fonte: `Requisitos Funcionais e Não Funcionais.pdf`, versão 1.0. Este checklis
 |---|---|---|
 | Nome do perfil vindo do Google | Implementado no app; sincronização do banco depende do deploy da API | O app usa `full_name`/`name` dos metadados Google quando o nome salvo ainda é o placeholder. A API atualiza `usuarios.nome` ao carregar o perfil. |
 | Modo escuro | Implementado | Alternância no Perfil; preferência persistida localmente no dispositivo. |
-| Estimativa de combustível por viagem | Implementado no app/API | Ao salvar, calcula distância ÷ consumo km/L cadastrado na moto, confirma o valor e mostra no detalhe. Requer migration abaixo. É uma estimativa, não leitura do combustível real. |
+| GPS ao entrar em Configurar viagem | Implementado; teste físico pendente | Solicita a permissão em primeiro plano ao abrir a tela e centra o mapa em uma posição atual do aparelho, com marcador e círculo de precisão. |
+| Dados adicionais da moto | Implementado no app/API; migration pendente | Placa (padrão antigo/Mercosul), ano, cor e capacidade do tanque são opcionais e validados nos dois lados. |
+| Cadastro de viagens (POST) | Implementado no app/API; smoke test autenticado pendente | POST `/api/viagens` grava métricas, datas, moto e pontos GPS; valida moto, datas e pontos. Confirmar com usuário autenticado após publicar a API. |
+| Consumo médio e combustível Premium | Implementado no app/API; billing pendente | Consumo por moto e litros estimados ficam disponíveis somente com `usuarios.premium = true`; não há cobrança integrada. |
+| Estimativa de combustível por viagem | Implementado no app/API; migração anterior pendente | Ao salvar, calcula distância ÷ consumo km/L cadastrado na moto, confirma e mostra no detalhe para Premium. É uma estimativa, não leitura do combustível real. |
 
-1. Aplicar no Supabase as migrations `202611060001_auth_user_mapping.sql`, `202611060002_track_points.sql` e `202611060003_fuel_estimate.sql`.
+1. Aplicar no Supabase as migrations `202611060001_auth_user_mapping.sql`, `202611060002_track_points.sql`, `202611060003_fuel_estimate.sql` e `202611110001_motorcycle_details.sql`.
 2. Adicionar `com.example.stravamotos://login-callback/` à lista de Redirect URLs do Supabase Auth.
-3. Publicar na Vercel a versão atualizada da API que sincroniza o nome Google, autentica cada chamada e grava `pontos_gps` e `combustivel_estimado_litros`.
+3. Publicar na Vercel a versão atualizada da API, incluindo validação de motos/viagens e bloqueio Premium no servidor.
 4. Validar no Android o login, rastreamento, pausa/parada, notificação, permissão Always e mapa; depois tratar recuperação caso o sistema encerre o processo.
 5. Definir e integrar cobrança (Google Play/App Store) com entitlement verificado no servidor; hoje o app só lê `usuarios.premium`.
 6. Se o requisito pedir ruas e lugares sem rede, escolher provedor de tiles com licença e cache offline; a cópia atual salva os pontos e mostra o traçado sem o mapa base.

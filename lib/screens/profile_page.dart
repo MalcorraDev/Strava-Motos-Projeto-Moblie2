@@ -43,14 +43,24 @@ class _ProfilePageState extends State<ProfilePage> {
   Widget build(BuildContext context) {
     final authUser = Supabase.instance.client.auth.currentUser;
     final metadata = authUser?.userMetadata ?? const <String, dynamic>{};
-    final googleName = (metadata['full_name'] ?? metadata['name'])?.toString().trim();
+    final googleName = (metadata['full_name'] ?? metadata['name'])
+        ?.toString()
+        .trim();
     final storedName = _profile?['nome']?.toString().trim();
-    final isPlaceholder = storedName == null ||
+    final isPlaceholder =
+        storedName == null ||
         storedName.isEmpty ||
-        RegExp(r'^(usuario teste|usuário teste|nome não informado)$', caseSensitive: false).hasMatch(storedName);
-    final name = isPlaceholder && googleName?.isNotEmpty == true ? googleName : storedName;
+        RegExp(
+          r'^(usuario teste|usuário teste|nome não informado)$',
+          caseSensitive: false,
+        ).hasMatch(storedName);
+    final name = isPlaceholder && googleName?.isNotEmpty == true
+        ? googleName
+        : storedName;
     final email = _profile?['email']?.toString().trim();
-    final photoUrl = (_profile?['foto_url'] ?? metadata['avatar_url'] ?? metadata['picture'])?.toString();
+    final photoUrl =
+        (_profile?['foto_url'] ?? metadata['avatar_url'] ?? metadata['picture'])
+            ?.toString();
     final premium = _profile?['premium'] == true;
 
     return Scaffold(
@@ -98,26 +108,28 @@ class _ProfilePageState extends State<ProfilePage> {
                   Container(
                     padding: const EdgeInsets.all(18),
                     decoration: BoxDecoration(
-                      color: Theme.of(context).cardTheme.color ?? Theme.of(context).colorScheme.surface,
+                      color:
+                          Theme.of(context).cardTheme.color ??
+                          Theme.of(context).colorScheme.surface,
                       borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF35302E) : const Color(0xFFF0E8E4)),
+                      border: Border.all(
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? const Color(0xFF35302E)
+                            : const Color(0xFFF0E8E4),
+                      ),
                     ),
                     child: Row(
                       children: [
-                        CircleAvatar(
-                          radius: 34,
-                          backgroundColor: HomePage.preto,
-                          backgroundImage:
-                              photoUrl != null && photoUrl.isNotEmpty
-                              ? NetworkImage(photoUrl)
-                              : null,
-                          child: photoUrl == null || photoUrl.isEmpty
-                              ? const Icon(
-                                  Icons.person,
-                                  size: 38,
-                                  color: Colors.white,
+                        ClipOval(
+                          child: photoUrl != null && photoUrl.isNotEmpty
+                              ? Image.network(
+                                  photoUrl,
+                                  width: 68,
+                                  height: 68,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, _, _) => _avatarFallback(),
                                 )
-                              : null,
+                              : _avatarFallback(),
                         ),
                         const SizedBox(width: 14),
                         Expanded(
@@ -140,7 +152,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                     : 'Nome não informado',
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.w800,
                                 ),
@@ -167,12 +179,15 @@ class _ProfilePageState extends State<ProfilePage> {
                   Container(
                     padding: const EdgeInsets.all(19),
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [HomePage.laranja, Color(0xFFE84815)],
-                      ),
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? const Color(0xFF1A1C20)
+                          : HomePage.laranja,
                       borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? const Color(0xFF30343A)
+                            : HomePage.laranja,
+                      ),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -181,7 +196,7 @@ class _ProfilePageState extends State<ProfilePage> {
                           children: [
                             const Icon(
                               Icons.workspace_premium,
-                              color: Colors.amber,
+                              color: HomePage.laranja,
                               size: 30,
                             ),
                             const SizedBox(width: 8),
@@ -204,8 +219,11 @@ class _ProfilePageState extends State<ProfilePage> {
                           premium
                               ? 'Sua conta possui acesso Premium.'
                               : 'Sua conta ainda não possui assinatura Premium.',
-                          style: const TextStyle(
-                            color: Colors.white,
+                          style: TextStyle(
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
+                                ? const Color(0xFFB6BBC4)
+                                : Colors.white,
                             height: 1.35,
                           ),
                         ),
@@ -217,7 +235,7 @@ class _ProfilePageState extends State<ProfilePage> {
                               builder: (dialogContext) => AlertDialog(
                                 title: const Text('Moto Ride Premium'),
                                 content: const Text(
-                                  'A contratação e o gerenciamento de assinatura ainda serão integrados. Seu perfil continua no plano gratuito.',
+                                  'O plano gratuito inclui cadastro de motos e histórico de viagens. O Premium libera estimativa de combustível e armazenamento offline. A cobrança ainda não está integrada; o acesso deve ser liberado pelo administrador no Supabase.',
                                 ),
                                 actions: [
                                   TextButton(
@@ -229,8 +247,12 @@ class _ProfilePageState extends State<ProfilePage> {
                               ),
                             ),
                             style: OutlinedButton.styleFrom(
-                              foregroundColor: Colors.white,
-                              side: const BorderSide(color: Colors.white70),
+                              foregroundColor: Theme.of(
+                                context,
+                              ).colorScheme.onSurface,
+                              side: BorderSide(
+                                color: Theme.of(context).colorScheme.outline,
+                              ),
                             ),
                             icon: const Icon(
                               Icons.workspace_premium_outlined,
@@ -256,9 +278,11 @@ class _ProfilePageState extends State<ProfilePage> {
                         color: HomePage.laranja,
                       ),
                       title: const Text('Modo escuro'),
-                      subtitle: const Text('Salvar esta preferência neste dispositivo.'),
+                      subtitle: const Text(
+                        'Salvar esta preferência neste dispositivo.',
+                      ),
                       value: AppPreferences.themeMode.value == ThemeMode.dark,
-                      activeColor: HomePage.laranja,
+                      activeThumbColor: HomePage.laranja,
                       onChanged: AppPreferences.setDarkMode,
                     ),
                   ),
@@ -360,4 +384,12 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
     );
   }
+
+  Widget _avatarFallback() => Container(
+    width: 68,
+    height: 68,
+    color: HomePage.preto,
+    alignment: Alignment.center,
+    child: const Icon(Icons.person, size: 38, color: Colors.white),
+  );
 }

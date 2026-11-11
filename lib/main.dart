@@ -47,148 +47,182 @@ class MotoRideApp extends StatelessWidget {
     return ValueListenableBuilder<ThemeMode>(
       valueListenable: AppPreferences.themeMode,
       builder: (context, themeMode, _) => MaterialApp(
-      title: 'Strava Motos',
-      debugShowCheckedModeBanner: false,
-      themeMode: themeMode,
-      theme: ThemeData(
-        scaffoldBackgroundColor: const Color(0xFFF8F9FA),
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFFFF5A1F),
-          primary: const Color(0xFFFF5A1F),
-          secondary: const Color(0xFF181818),
-        ),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFFFFF8F5),
-          foregroundColor: Color(0xFF181818),
-          elevation: 0,
-          centerTitle: false,
-          titleTextStyle: TextStyle(
-            color: Color(0xFF181818),
-            fontSize: 20,
-            fontWeight: FontWeight.w700,
+        title: 'Strava Motos',
+        debugShowCheckedModeBanner: false,
+        themeMode: themeMode,
+        theme: ThemeData(
+          scaffoldBackgroundColor: const Color(0xFFF8F9FA),
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: const Color(0xFFFF5A1F),
+            primary: const Color(0xFFFF5A1F),
+            secondary: const Color(0xFF181818),
           ),
-        ),
-        cardTheme: CardThemeData(
-          color: Colors.white,
-          elevation: 1,
-          margin: EdgeInsets.zero,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
-            side: const BorderSide(color: Color(0xFFF0E8E4)),
-          ),
-        ),
-        inputDecorationTheme: InputDecorationTheme(
-          filled: true,
-          fillColor: Colors.white,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 14,
-          ),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: const BorderSide(color: Color(0xFFE7DDD8)),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: const BorderSide(color: Color(0xFFFF5A1F), width: 1.6),
-          ),
-        ),
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFFFF5A1F),
-            foregroundColor: Colors.white,
-            minimumSize: const Size(48, 50),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14),
+          appBarTheme: const AppBarTheme(
+            backgroundColor: Color(0xFFFFF8F5),
+            foregroundColor: Color(0xFF181818),
+            elevation: 0,
+            centerTitle: false,
+            titleTextStyle: TextStyle(
+              color: Color(0xFF181818),
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
             ),
-            textStyle: const TextStyle(fontWeight: FontWeight.w700),
           ),
-        ),
-        useMaterial3: true,
-      ),
-      darkTheme: ThemeData(
-        brightness: Brightness.dark,
-        scaffoldBackgroundColor: const Color(0xFF121212),
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFFFF5A1F),
-          brightness: Brightness.dark,
-          primary: const Color(0xFFFF6A35),
-          secondary: const Color(0xFFE7A184),
-          surface: const Color(0xFF1D1D1D),
-        ),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFF1A1716),
-          foregroundColor: Colors.white,
-          elevation: 0,
-          centerTitle: false,
-          titleTextStyle: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w700),
-        ),
-        cardTheme: CardThemeData(
-          color: const Color(0xFF1D1D1D), elevation: 1, margin: EdgeInsets.zero,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18), side: const BorderSide(color: Color(0xFF35302E))),
-        ),
-        inputDecorationTheme: InputDecorationTheme(
-          filled: true, fillColor: const Color(0xFF242424),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFF49413E))),
-          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFFFF6A35), width: 1.6)),
-        ),
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF5A1F), foregroundColor: Colors.white, minimumSize: const Size(48, 50), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)), textStyle: const TextStyle(fontWeight: FontWeight.w700)),
-        ),
-        useMaterial3: true,
-      ),
-      builder: (context, child) => LayoutBuilder(
-        builder: (context, constraints) {
-          final width = constraints.maxWidth < 520
-              ? constraints.maxWidth
-              : 520.0;
-          final background = Theme.of(context).brightness == Brightness.dark
-              ? const Color(0xFF101010)
-              : const Color(0xFFECE7E4);
-          final surface = Theme.of(context).scaffoldBackgroundColor;
-          return ColoredBox(
-            color: background,
-            child: Center(
-              child: Container(
-                width: width,
-                height: constraints.maxHeight,
-                decoration: BoxDecoration(
-                  color: surface,
-                  boxShadow: constraints.maxWidth > 520
-                      ? const [
-                          BoxShadow(
-                            color: Color(0x1F181818),
-                            blurRadius: 28,
-                            offset: Offset(0, 8),
-                          ),
-                        ]
-                      : null,
-                ),
-                child: child ?? const SizedBox.shrink(),
+          cardTheme: CardThemeData(
+            color: Colors.white,
+            elevation: 1,
+            margin: EdgeInsets.zero,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(18),
+              side: const BorderSide(color: Color(0xFFF0E8E4)),
+            ),
+          ),
+          inputDecorationTheme: InputDecorationTheme(
+            filled: true,
+            fillColor: Colors.white,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 14,
+            ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: const BorderSide(color: Color(0xFFE7DDD8)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: const BorderSide(
+                color: Color(0xFFFF5A1F),
+                width: 1.6,
               ),
             ),
-          );
+          ),
+          elevatedButtonTheme: ElevatedButtonThemeData(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFFF5A1F),
+              foregroundColor: Colors.white,
+              minimumSize: const Size(48, 50),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+              textStyle: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+          ),
+          useMaterial3: true,
+        ),
+        darkTheme: ThemeData(
+          brightness: Brightness.dark,
+          scaffoldBackgroundColor: const Color(0xFF121316),
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: const Color(0xFFFF5A1F),
+            brightness: Brightness.dark,
+            primary: const Color(0xFFFF6A35),
+            secondary: const Color(0xFFE7A184),
+            surface: const Color(0xFF1A1C20),
+          ),
+          appBarTheme: const AppBarTheme(
+            backgroundColor: Color(0xFF121316),
+            foregroundColor: Colors.white,
+            elevation: 0,
+            centerTitle: false,
+            titleTextStyle: TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          cardTheme: CardThemeData(
+            color: const Color(0xFF1A1C20),
+            elevation: 0,
+            margin: EdgeInsets.zero,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(18),
+              side: const BorderSide(color: Color(0xFF26292E)),
+            ),
+          ),
+          inputDecorationTheme: InputDecorationTheme(
+            filled: true,
+            fillColor: const Color(0xFF1A1C20),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 14,
+            ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: const BorderSide(color: Color(0xFF26292E)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: const BorderSide(
+                color: Color(0xFFFF6A35),
+                width: 1.6,
+              ),
+            ),
+          ),
+          elevatedButtonTheme: ElevatedButtonThemeData(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFFF5A1F),
+              foregroundColor: Colors.white,
+              minimumSize: const Size(48, 50),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+              textStyle: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+          ),
+          useMaterial3: true,
+        ),
+        builder: (context, child) => LayoutBuilder(
+          builder: (context, constraints) {
+            final width = constraints.maxWidth < 520
+                ? constraints.maxWidth
+                : 520.0;
+            final background = Theme.of(context).brightness == Brightness.dark
+                ? const Color(0xFF0D0E10)
+                : const Color(0xFFECE7E4);
+            final surface = Theme.of(context).scaffoldBackgroundColor;
+            return ColoredBox(
+              color: background,
+              child: Center(
+                child: Container(
+                  width: width,
+                  height: constraints.maxHeight,
+                  decoration: BoxDecoration(
+                    color: surface,
+                    boxShadow: constraints.maxWidth > 520
+                        ? const [
+                            BoxShadow(
+                              color: Color(0x1F181818),
+                              blurRadius: 28,
+                              offset: Offset(0, 8),
+                            ),
+                          ]
+                        : null,
+                  ),
+                  child: child ?? const SizedBox.shrink(),
+                ),
+              ),
+            );
+          },
+        ),
+        home: const AuthGate(),
+        onGenerateRoute: (settings) {
+          final routeName = settings.name ?? '';
+          // Flutter's Navigator also receives Android OAuth callback URLs as
+          // route information (for example `/?code=...`). Let Supabase handle
+          // the code exchange, while keeping the app on its auth gate route.
+          if (routeName.startsWith('/?code=') ||
+              routeName.startsWith('/#access_token=')) {
+            return MaterialPageRoute<void>(
+              settings: settings,
+              builder: (_) => const AuthGate(),
+            );
+          }
+          return null;
         },
       ),
-      home: const AuthGate(),
-      onGenerateRoute: (settings) {
-        final routeName = settings.name ?? '';
-        // Flutter's Navigator also receives Android OAuth callback URLs as
-        // route information (for example `/?code=...`). Let Supabase handle
-        // the code exchange, while keeping the app on its auth gate route.
-        if (routeName.startsWith('/?code=') ||
-            routeName.startsWith('/#access_token=')) {
-          return MaterialPageRoute<void>(
-            settings: settings,
-            builder: (_) => const AuthGate(),
-          );
-        }
-        return null;
-      },
-    ));
+    );
   }
 }
 
