@@ -68,7 +68,7 @@ class RouteDetailPage extends StatelessWidget {
             child: path.length < 2
                 ? _mapUnavailable()
                 : offlineSaved
-                ? _offlineMap(path)
+                ? _offlineMap(context, path)
                 : FlutterMap(
                     options: MapOptions(
                       initialCenter: path.first,
@@ -116,7 +116,12 @@ class RouteDetailPage extends StatelessWidget {
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: _statTile(context, Icons.timer_outlined, 'Duração', duration),
+                child: _statTile(
+                  context,
+                  Icons.timer_outlined,
+                  'Duração',
+                  duration,
+                ),
               ),
             ],
           ),
@@ -133,11 +138,21 @@ class RouteDetailPage extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: _statTile(context, Icons.speed_rounded, 'Média', avgSpeed),
+                child: _statTile(
+                  context,
+                  Icons.speed_rounded,
+                  'Média',
+                  avgSpeed,
+                ),
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: _statTile(context, Icons.bolt_rounded, 'Máxima', maxSpeed),
+                child: _statTile(
+                  context,
+                  Icons.bolt_rounded,
+                  'Máxima',
+                  maxSpeed,
+                ),
               ),
             ],
           ),
@@ -195,21 +210,26 @@ class RouteDetailPage extends StatelessWidget {
     );
   }
 
-  Widget _offlineMap(List<LatLng> path) {
+  Widget _offlineMap(BuildContext context, List<LatLng> path) {
     return Stack(
       fit: StackFit.expand,
       children: [
-        CustomPaint(painter: _OfflinePathPainter(path)),
+        CustomPaint(
+          painter: _OfflinePathPainter(
+            path,
+            darkMode: Theme.of(context).brightness == Brightness.dark,
+          ),
+        ),
         Positioned(
           left: 12,
           top: 12,
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.surface,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Row(
+            child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(
@@ -221,6 +241,7 @@ class RouteDetailPage extends StatelessWidget {
                 Text(
                   'TRAJETO OFFLINE',
                   style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
                     fontSize: 10,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 0.4,
@@ -230,12 +251,15 @@ class RouteDetailPage extends StatelessWidget {
             ),
           ),
         ),
-        const Positioned(
+        Positioned(
           left: 12,
           bottom: 10,
           child: Text(
             'Traçado GPS salvo neste aparelho · sem mapa de ruas',
-            style: TextStyle(color: Color(0xFF625B57), fontSize: 10),
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              fontSize: 10,
+            ),
           ),
         ),
       ],
@@ -284,18 +308,20 @@ class RouteDetailPage extends StatelessWidget {
 }
 
 class _OfflinePathPainter extends CustomPainter {
-  const _OfflinePathPainter(this.points);
+  const _OfflinePathPainter(this.points, {required this.darkMode});
 
   final List<LatLng> points;
+  final bool darkMode;
 
   @override
   void paint(Canvas canvas, Size size) {
     canvas.drawRect(
       Offset.zero & size,
-      Paint()..color = const Color(0xFFF2EEEB),
+      Paint()
+        ..color = darkMode ? const Color(0xFF121316) : const Color(0xFFF2EEEB),
     );
     final gridPaint = Paint()
-      ..color = const Color(0xFFDCD5D0)
+      ..color = darkMode ? const Color(0xFF292C32) : const Color(0xFFDCD5D0)
       ..strokeWidth = 1;
     for (double x = 0; x < size.width; x += 34) {
       canvas.drawLine(Offset(x, 0), Offset(x, size.height), gridPaint);
@@ -356,10 +382,10 @@ class _OfflinePathPainter extends CustomPainter {
     }
 
     marker(points.first, const Color(0xFF3F9D59));
-    marker(points.last, HomePage.preto);
+    marker(points.last, darkMode ? Colors.white : HomePage.preto);
   }
 
   @override
   bool shouldRepaint(covariant _OfflinePathPainter oldDelegate) =>
-      oldDelegate.points != points;
+      oldDelegate.points != points || oldDelegate.darkMode != darkMode;
 }

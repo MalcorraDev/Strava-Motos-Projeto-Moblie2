@@ -144,209 +144,332 @@ class _BikesPageState extends State<BikesPage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Minha garagem'),
-        actions: [
-          IconButton(onPressed: _load, icon: const Icon(Icons.refresh)),
-        ],
-      ),
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: HomePage.laranja,
         onPressed: () => _openBikeForm(),
         foregroundColor: Colors.white,
         icon: const Icon(Icons.add_rounded),
-        label: const Text('Adicionar moto'),
+        label: const Text(
+          'ADICIONAR MOTO',
+          style: TextStyle(fontWeight: FontWeight.w800, letterSpacing: .5),
+        ),
       ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : _error != null
-          ? _errorView()
-          : _bikes.isEmpty
-          ? Center(
-              child: Padding(
-                padding: const EdgeInsets.all(26),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
+      body: SafeArea(
+        child: RefreshIndicator(
+          onRefresh: _load,
+          color: HomePage.laranja,
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(18, 12, 18, 110),
+            children: [
+              Row(
+                children: [
+                  const Expanded(
+                    child: Text.rich(
+                      TextSpan(
+                        children: [
+                          TextSpan(
+                            text: 'MOTO ',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 1.1,
+                            ),
+                          ),
+                          TextSpan(
+                            text: 'RIDE',
+                            style: TextStyle(
+                              color: HomePage.laranja,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 1.1,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: _load,
+                    tooltip: 'Atualizar garagem',
+                    icon: const Icon(Icons.sync_rounded),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 22),
+              const _GarageEyebrow('GARAGEM DO PILOTO'),
+              const SizedBox(height: 5),
+              Text(
+                'Suas motocicletas',
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 5),
+              Text(
+                'Fichas técnicas e dados da sua garagem.',
+                style: TextStyle(color: colors.onSurfaceVariant),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: HomePage.painel,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: HomePage.borda),
+                ),
+                child: Row(
                   children: [
                     Container(
-                      width: 82,
-                      height: 82,
+                      width: 48,
+                      height: 48,
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFFF0E9),
-                        borderRadius: BorderRadius.circular(26),
+                        color: HomePage.laranja.withValues(alpha: .12),
+                        borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Icon(
                         Icons.two_wheeler_rounded,
-                        size: 42,
                         color: HomePage.laranja,
                       ),
                     ),
-                    const SizedBox(height: 18),
-                    const Text(
-                      'Sua garagem começa aqui',
-                      style: TextStyle(
-                        fontSize: 19,
-                        fontWeight: FontWeight.w800,
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const _GarageEyebrow('VEÍCULOS CADASTRADOS'),
+                          const SizedBox(height: 3),
+                          Text(
+                            _loading
+                                ? 'SINCRONIZANDO'
+                                : '${_bikes.length} ${_bikes.length == 1 ? 'MOTOCICLETA' : 'MOTOCICLETAS'}',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: .5,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 7),
-                    const Text(
-                      'Cadastre sua moto para associá-la às viagens e acompanhar o consumo.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: Color(0xFF827B77), height: 1.4),
+                    if (_premium)
+                      const _GarageStatus(
+                        label: 'PREMIUM',
+                        color: HomePage.verde,
+                      )
+                    else
+                      const _GarageStatus(
+                        label: 'FREE',
+                        color: HomePage.laranja,
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+              const _GarageEyebrow('FROTA'),
+              const SizedBox(height: 10),
+              if (_loading)
+                const Padding(
+                  padding: EdgeInsets.all(30),
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              else if (_error != null)
+                _errorView()
+              else if (_bikes.isEmpty)
+                Container(
+                  padding: const EdgeInsets.all(22),
+                  decoration: BoxDecoration(
+                    color: HomePage.painel,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: HomePage.borda),
+                  ),
+                  child: Column(
+                    children: [
+                      const Icon(
+                        Icons.two_wheeler_rounded,
+                        color: HomePage.laranja,
+                        size: 38,
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Sua garagem começa aqui',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Cadastre uma moto para associá-la às viagens.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: colors.onSurfaceVariant),
+                      ),
+                      const SizedBox(height: 12),
+                      OutlinedButton.icon(
+                        onPressed: () => _openBikeForm(),
+                        icon: const Icon(Icons.add),
+                        label: const Text('CADASTRAR MOTO'),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                ..._bikes.map((bike) => _garageBikeCard(context, bike)),
+              const SizedBox(height: 14),
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: HomePage.painel,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: HomePage.borda),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.info_outline_rounded,
+                      color: HomePage.verde,
+                      size: 20,
                     ),
-                    const SizedBox(height: 16),
-                    OutlinedButton.icon(
-                      onPressed: () => _openBikeForm(),
-                      icon: const Icon(Icons.add),
-                      label: const Text('Cadastrar primeira moto'),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        _premium
+                            ? 'Consumo médio é calculado com os dados registrados nas viagens.'
+                            : 'Consumo médio e estimativa de combustível são recursos Premium.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          height: 1.35,
+                          color: colors.onSurfaceVariant,
+                        ),
+                      ),
                     ),
                   ],
                 ),
               ),
-            )
-          : RefreshIndicator(
-              onRefresh: _load,
-              child: ListView.builder(
-                padding: const EdgeInsets.fromLTRB(18, 14, 18, 100),
-                itemCount: _bikes.length + 1,
-                itemBuilder: (context, index) {
-                  if (index == 0) {
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 18),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _garageBikeCard(BuildContext context, Map<String, dynamic> bike) {
+    final cc = bike['cilindrada']?.toString() ?? '—';
+    final plate = bike['placa']?.toString().trim();
+    final year = bike['ano']?.toString();
+    final color = bike['cor']?.toString().trim();
+    final tank = bike['capacidade_tanque_litros'];
+    final consumption = bike['consumo_km_l'];
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: HomePage.painel,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: HomePage.borda),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            height: 3,
+            decoration: const BoxDecoration(
+              color: HomePage.laranja,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(14)),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 8, 15),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: HomePage.laranja.withValues(alpha: .12),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.two_wheeler_rounded,
+                        color: HomePage.laranja,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            'Sua garagem',
-                            style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
+                          const _GarageEyebrow('MOTO CADASTRADA'),
+                          const SizedBox(height: 3),
                           Text(
-                            '${_bikes.length} ${_bikes.length == 1 ? 'motocicleta cadastrada' : 'motocicletas cadastradas'}',
-                            style: const TextStyle(color: Color(0xFF827B77)),
-                          ),
-                          const SizedBox(height: 14),
-                          Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: HomePage.preto,
-                              borderRadius: BorderRadius.circular(18),
+                            bike['modelo']?.toString() ?? 'Motocicleta',
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w900,
                             ),
-                            child: const Row(
-                              children: [
-                                Icon(
-                                  Icons.two_wheeler_rounded,
-                                  color: HomePage.laranja,
-                                  size: 25,
-                                ),
-                                SizedBox(width: 12),
-                                Expanded(
-                                  child: Text(
-                                    'Mantenha seus modelos e dados de consumo organizados em um só lugar.',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      height: 1.35,
-                                      fontSize: 13,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }
-
-                  final bike = _bikes[index - 1];
-
-                  final cc = bike['cilindrada']?.toString() ?? '—';
-
-                  final consumo = bike['consumo_km_l'] == null
-                      ? 'Não informado'
-                      : '${bike['consumo_km_l']} km/L';
-
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(15, 14, 8, 14),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 56,
-                            height: 56,
-                            decoration: BoxDecoration(
-                              color: HomePage.preto,
-                              borderRadius: BorderRadius.circular(18),
-                            ),
-                            child: const Icon(
-                              Icons.two_wheeler_rounded,
-                              color: HomePage.laranja,
-                              size: 28,
-                            ),
-                          ),
-                          const SizedBox(width: 13),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  bike['modelo']?.toString() ?? 'Moto',
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w800,
-                                    fontSize: 16,
-                                  ),
-                                ),
-                                const SizedBox(height: 7),
-                                Wrap(
-                                  spacing: 6,
-                                  runSpacing: 6,
-                                  children: [
-                                    _BikeTag(label: '$cc cc'),
-                                    if (bike['placa']?.toString().isNotEmpty ==
-                                        true)
-                                      _BikeTag(label: bike['placa'].toString()),
-                                    if (bike['ano'] != null)
-                                      _BikeTag(label: bike['ano'].toString()),
-                                    if (_premium &&
-                                        bike['consumo_km_l'] != null)
-                                      _BikeTag(label: consumo),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                          PopupMenuButton<String>(
-                            tooltip: 'Opções da moto',
-                            onSelected: (value) {
-                              if (value == 'editar') _openBikeForm(bike: bike);
-                              if (value == 'excluir') _delete(bike);
-                            },
-                            itemBuilder: (_) => const [
-                              PopupMenuItem(
-                                value: 'editar',
-                                child: Text('Editar'),
-                              ),
-                              PopupMenuItem(
-                                value: 'excluir',
-                                child: Text('Excluir'),
-                              ),
-                            ],
                           ),
                         ],
                       ),
                     ),
-                  );
-                },
-              ),
+                    PopupMenuButton<String>(
+                      tooltip: 'Opções da moto',
+                      onSelected: (value) {
+                        if (value == 'editar') _openBikeForm(bike: bike);
+                        if (value == 'excluir') _delete(bike);
+                      },
+                      itemBuilder: (_) => const [
+                        PopupMenuItem(value: 'editar', child: Text('Editar')),
+                        PopupMenuItem(value: 'excluir', child: Text('Excluir')),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _BikeTag(label: '$cc cc'),
+                    if (plate != null && plate.isNotEmpty)
+                      _BikeTag(label: plate.toUpperCase()),
+                    if (year != null && year.isNotEmpty) _BikeTag(label: year),
+                    if (color != null && color.isNotEmpty)
+                      _BikeTag(label: color),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _BikeFact(
+                        label: 'TANQUE',
+                        value: tank == null ? '—' : '${tank.toString()} L',
+                        icon: Icons.local_gas_station_outlined,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _BikeFact(
+                        label: _premium ? 'CONSUMO MÉDIO' : 'CONSUMO',
+                        value: _premium && consumption != null
+                            ? '${consumption.toString()} km/L'
+                            : 'PREMIUM',
+                        icon: _premium
+                            ? Icons.speed_rounded
+                            : Icons.lock_outline_rounded,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -719,4 +842,98 @@ class _BikeTag extends StatelessWidget {
       ),
     );
   }
+}
+
+class _GarageEyebrow extends StatelessWidget {
+  const _GarageEyebrow(this.label);
+  final String label;
+  @override
+  Widget build(BuildContext context) => Text(
+    label,
+    style: const TextStyle(
+      color: HomePage.laranja,
+      fontFamily: 'monospace',
+      fontSize: 10,
+      fontWeight: FontWeight.w800,
+      letterSpacing: 1,
+    ),
+  );
+}
+
+class _GarageStatus extends StatelessWidget {
+  const _GarageStatus({required this.label, required this.color});
+  final String label;
+  final Color color;
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+    decoration: BoxDecoration(
+      color: color.withValues(alpha: .12),
+      borderRadius: BorderRadius.circular(6),
+    ),
+    child: Text(
+      label,
+      style: TextStyle(
+        color: color,
+        fontFamily: 'monospace',
+        fontSize: 9,
+        fontWeight: FontWeight.w900,
+        letterSpacing: .5,
+      ),
+    ),
+  );
+}
+
+class _BikeFact extends StatelessWidget {
+  const _BikeFact({
+    required this.label,
+    required this.value,
+    required this.icon,
+  });
+  final String label;
+  final String value;
+  final IconData icon;
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(10),
+    decoration: BoxDecoration(
+      color: HomePage.preto,
+      borderRadius: BorderRadius.circular(9),
+    ),
+    child: Row(
+      children: [
+        Icon(icon, color: HomePage.laranja, size: 17),
+        const SizedBox(width: 7),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Color(0xFF999BA1),
+                  fontFamily: 'monospace',
+                  fontSize: 8,
+                  letterSpacing: .3,
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                value,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: value == 'PREMIUM' ? HomePage.laranja : Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
 }

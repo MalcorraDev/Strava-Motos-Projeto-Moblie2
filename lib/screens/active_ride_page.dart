@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -338,22 +339,29 @@ class _ActiveRidePageState extends State<ActiveRidePage> {
     if (!mounted || (_rideStarted && _paused)) return;
     if (position.latitude.isNaN ||
         position.longitude.isNaN ||
+        position.latitude < -90 ||
+        position.latitude > 90 ||
+        position.longitude < -180 ||
+        position.longitude > 180 ||
         position.accuracy < 0) {
       return;
     }
-    _currentPosition = position;
-    final point = LatLng(position.latitude, position.longitude);
-    if (_mapReady) _mapController.move(point, 16);
     if (!_rideStarted) {
-      setState(
-        () => _gpsError = position.accuracy > 50
-            ? 'Localização encontrada, mas o sinal ainda está impreciso.'
-            : null,
-      );
+      if (position.accuracy <= 0 || position.accuracy > 35) {
+        setState(
+          () => _gpsError =
+              'Localização encontrada, mas o sinal ainda está impreciso.',
+        );
+        return;
+      }
+      _currentPosition = position;
+      final point = LatLng(position.latitude, position.longitude);
+      if (_mapReady) _mapController.move(point, 16);
+      setState(() => _gpsError = null);
       return;
     }
     if (position.accuracy <= 0) return;
-    if (position.accuracy > 50) {
+    if (position.accuracy > 35) {
       if (_gpsError !=
           'Sinal GPS fraco. Vá para uma área aberta para obter melhor precisão.') {
         setState(
@@ -363,6 +371,12 @@ class _ActiveRidePageState extends State<ActiveRidePage> {
       }
       return;
     }
+
+    // Keep the last trustworthy fix on screen; weak fixes should not jump the
+    // map dot to a neighboring street or inflate the trip metrics.
+    _currentPosition = position;
+    final point = LatLng(position.latitude, position.longitude);
+    if (_mapReady) _mapController.move(point, 16);
 
     final previous = _lastPosition;
     var speed = 0.0;
@@ -376,10 +390,51 @@ class _ActiveRidePageState extends State<ActiveRidePage> {
       final seconds =
           position.timestamp.difference(previous.timestamp).inMilliseconds /
           1000;
-      if (seconds <= 0 || meters / seconds * 3.6 > 220) return;
-      _distanceMeters += meters;
-      if (seconds > 0) speed = meters / seconds * 3.6;
-      if (speed >= 3) {
+      if (seconds <= 0) return;
+
+      // GPS drift while stopped can look like movement. Keep the previous
+      // accepted fix as baseline until displacement exceeds its uncertainty.
+      final noiseThreshold = math.max(
+        4.0,
+        ((previous.accuracy + position.accuracy) / 2) * 1.2,
+      );
+      if (meters <= noiseThreshold) {
+        final reportedSpeed = position.speed * 3.6;
+        final trustedReportedSpeed =
+            position.speedAccuracy >= 0 &&
+            position.speedAccuracy <= 1.5 &&
+            reportedSpeed.isFinite &&
+            reportedSpeed >= 5;
+        if (trustedReportedSpeed) {
+          _movingMilliseconds += position.timestamp
+              .difference(previous.timestamp)
+              .inMilliseconds
+              .clamp(0, 10000)
+              .toInt();
+          _maxSpeedKmh = math.max(_maxSpeedKmh, reportedSpeed);
+        }
+        setState(() {
+          _currentSpeedKmh = trustedReportedSpeed
+              ? reportedSpeed.clamp(0, 220).toDouble()
+              : 0;
+        });
+        return;
+      }
+
+      // A small uncertainty correction reduces cumulative drift while keeping
+      // slow movement measurable over successive fixes.
+      final adjustedMeters = math.max(0.0, meters - noiseThreshold * 0.35);
+      speed = adjustedMeters / seconds * 3.6;
+      if (!speed.isFinite || speed > 220) return;
+      if (speed < 5) {
+        // Treat sub-5 km/h derived speeds as stationary GPS noise; advance the
+        // baseline so drift does not accumulate into a false trip.
+        _lastPosition = position;
+        setState(() => _currentSpeedKmh = 0);
+        return;
+      }
+      _distanceMeters += adjustedMeters;
+      if (speed >= 5) {
         _movingMilliseconds += position.timestamp
             .difference(previous.timestamp)
             .inMilliseconds
@@ -399,7 +454,7 @@ class _ActiveRidePageState extends State<ActiveRidePage> {
               position.latitude,
               position.longitude,
             ) >=
-            20;
+            8;
     if (shouldSavePoint && _trackPayload.length < 20000) {
       _trackPayload.add({
         'latitude': position.latitude,
@@ -703,6 +758,42 @@ class _ActiveRidePageState extends State<ActiveRidePage> {
                         ),
                       ),
                     ),
+                  if (_currentPosition != null)
+                    Align(
+                      alignment: Alignment.topLeft,
+                      child: Container(
+                        margin: const EdgeInsets.all(12),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 9,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1A1C20).withValues(alpha: .96),
+                          borderRadius: BorderRadius.circular(9),
+                          border: Border.all(color: HomePage.borda),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.my_location_rounded,
+                              color: HomePage.verde,
+                              size: 16,
+                            ),
+                            const SizedBox(width: 7),
+                            Text(
+                              'GPS • ±${_currentPosition!.accuracy.toStringAsFixed(0)} m',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontFamily: 'monospace',
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   if (_gpsError != null)
                     Align(
                       alignment: Alignment.bottomCenter,
@@ -876,26 +967,36 @@ class _ActiveRidePageState extends State<ActiveRidePage> {
   }
 
   Widget _stat(String value, String label) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: HomePage.preto,
+    return Container(
+      constraints: const BoxConstraints(minWidth: 88),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 10),
+      decoration: BoxDecoration(
+        color: HomePage.preto,
+        borderRadius: BorderRadius.circular(9),
+        border: Border.all(color: HomePage.borda),
+      ),
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+              color: Colors.white,
+              fontFamily: 'monospace',
+            ),
           ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 11,
-            color: HomePage.laranja,
-            fontWeight: FontWeight.bold,
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 11,
+              color: HomePage.verde,
+              fontWeight: FontWeight.bold,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

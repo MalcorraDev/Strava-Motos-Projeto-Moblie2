@@ -14,6 +14,7 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage> {
   Map<String, dynamic>? _profile;
   bool _loading = true;
+  bool _activatingPremium = false;
   String? _error;
 
   @override
@@ -36,6 +37,28 @@ class _ProfilePageState extends State<ProfilePage> {
       setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
     } finally {
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _activatePremiumTest() async {
+    if (_activatingPremium) return;
+    setState(() => _activatingPremium = true);
+    try {
+      await StravaApi.ativarPremiumTeste();
+      await _loadProfile();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Premium de teste ativado por R\$ 0,00.')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(error.toString().replaceFirst('Exception: ', '')),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _activatingPremium = false);
     }
   }
 
@@ -228,38 +251,48 @@ class _ProfilePageState extends State<ProfilePage> {
                           ),
                         ),
                         const SizedBox(height: 14),
-                        if (!premium)
-                          OutlinedButton.icon(
-                            onPressed: () => showDialog<void>(
-                              context: context,
-                              builder: (dialogContext) => AlertDialog(
-                                title: const Text('Moto Ride Premium'),
-                                content: const Text(
-                                  'O plano gratuito inclui cadastro de motos e histórico de viagens. O Premium libera estimativa de combustível e armazenamento offline. A cobrança ainda não está integrada; o acesso deve ser liberado pelo administrador no Supabase.',
-                                ),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () =>
-                                        Navigator.pop(dialogContext),
-                                    child: const Text('Entendi'),
-                                  ),
-                                ],
+                        if (!premium) ...[
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: _activatingPremium
+                                  ? null
+                                  : _activatePremiumTest,
+                              icon: _activatingPremium
+                                  ? const SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : const Icon(
+                                      Icons.workspace_premium_outlined,
+                                      size: 18,
+                                    ),
+                              label: Text(
+                                _activatingPremium
+                                    ? 'ATIVANDO...'
+                                    : 'ATIVAR PREMIUM DE TESTE · R\$ 0,00',
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: HomePage.laranja,
+                                foregroundColor: Colors.white,
                               ),
                             ),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: Theme.of(
-                                context,
-                              ).colorScheme.onSurface,
-                              side: BorderSide(
-                                color: Theme.of(context).colorScheme.outline,
-                              ),
-                            ),
-                            icon: const Icon(
-                              Icons.workspace_premium_outlined,
-                              size: 18,
-                            ),
-                            label: const Text('Conhecer Premium'),
                           ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Disponível somente para contas autorizadas na Vercel enquanto o modo de teste estiver ligado.',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),

@@ -376,16 +376,19 @@ class _RoutesPageState extends State<RoutesPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'Seu histórico',
+                      'ROTAS & VIAGENS',
                       style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.w800,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: .3,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${_routes.length} ${_routes.length == 1 ? 'viagem registrada' : 'viagens registradas'}',
-                      style: const TextStyle(color: Color(0xFF827B77)),
+                      '${_routes.length} ${_routes.length == 1 ? 'viagem registrada' : 'viagens registradas'} · histórico do piloto',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
                     ),
                     if (_offlineMode) ...[
                       const SizedBox(height: 10),
@@ -395,7 +398,10 @@ class _RoutesPageState extends State<RoutesPage> {
                           vertical: 8,
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFFF0E9),
+                          color: Theme.of(context).colorScheme.surface,
+                          border: Border.all(
+                            color: Theme.of(context).colorScheme.outlineVariant,
+                          ),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: const Row(
@@ -422,8 +428,9 @@ class _RoutesPageState extends State<RoutesPage> {
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: HomePage.preto,
-                        borderRadius: BorderRadius.circular(18),
+                        color: HomePage.painel,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: HomePage.borda),
                       ),
                       child: const Row(
                         children: [
@@ -639,7 +646,14 @@ class _RoutesPageState extends State<RoutesPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Rotas e viagens'),
+        title: const Text(
+          'MOTO RIDE  /  ROTAS',
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w900,
+            letterSpacing: .8,
+          ),
+        ),
         elevation: 0,
         actions: [
           IconButton(

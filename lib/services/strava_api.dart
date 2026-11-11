@@ -151,4 +151,8 @@ class StravaApi {
     final response = await _request('/api/usuarios/me');
     return Map<String, dynamic>.from(response['data']);
   }
+
+  static Future<void> ativarPremiumTeste() async {
+    await _request('/api/premium/test', method: 'POST', body: const {});
+  }
 }
